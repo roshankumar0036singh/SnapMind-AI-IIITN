@@ -1,8 +1,39 @@
 import React from "react";
 import { Scale, TrendingDown, CheckCircle2, AlertTriangle, ShieldCheck, FileText, ArrowRight, ExternalLink } from "lucide-react";
 
-export default function CalibratedExposureView({ matrixData, onOpenDoc, onOpenBriefing }) {
-  const items = matrixData && matrixData.length > 0 ? matrixData : [
+export default function CalibratedExposureView({ matrixData, activeRun, caseData, onOpenDoc, onOpenBriefing }) {
+  const derivedFromRanges = activeRun?.ranges?.map((r) => {
+    const thorLow = r.thor_low;
+    const thorHigh = r.thor_high;
+    const lokiLow = r.loki_low;
+    const lokiHigh = r.loki_high;
+    const odinLow = r.odin_low;
+    const odinHigh = r.odin_high;
+
+    const thorStr = thorLow != null ? `${thorLow}% to ${thorHigh}%` : "Conceded / N/A";
+    const lokiStr = lokiLow != null ? `${lokiLow}% to ${lokiHigh}%` : "Conceded / N/A";
+    const odinStr = odinLow != null ? `${odinLow}% to ${odinHigh}%` : "Contested / Pending";
+
+    const matchedClaims = (activeRun?.claims || []).filter(
+      (c) =>
+        c.country?.toLowerCase() === r.country?.toLowerCase() &&
+        c.sector?.toLowerCase() === r.sector?.toLowerCase()
+    );
+    const keyCites = Array.from(new Set(matchedClaims.flatMap((c) => c.citations || []))).filter(Boolean);
+
+    return {
+      country: r.country,
+      sector: r.sector.charAt(0).toUpperCase() + r.sector.slice(1),
+      thor_range: thorStr,
+      loki_range: lokiStr,
+      odin_calibrated_range: odinStr,
+      status: odinLow != null ? "ESTABLISHED" : "CONTESTED",
+      primary_driver: r.basis || "Judicial synthesis evaluated under Simulated Clock window.",
+      key_citations: keyCites.length > 0 ? keyCites : ["ORV-0016", "ORV-0009"],
+    };
+  });
+
+  const defaultItems = [
     {
       country: "Midgard",
       sector: "Wheat",
@@ -44,6 +75,13 @@ export default function CalibratedExposureView({ matrixData, onOpenDoc, onOpenBr
       key_citations: ["ORV-0046", "ORV-0022"]
     }
   ];
+
+  const items =
+    derivedFromRanges && derivedFromRanges.length > 0
+      ? derivedFromRanges
+      : matrixData && matrixData.length > 0
+      ? matrixData
+      : defaultItems;
 
   return (
     <div className="flex flex-col gap-8 w-full animate-fade-in">
