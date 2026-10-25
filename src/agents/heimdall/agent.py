@@ -80,15 +80,13 @@ _groq_client: Optional[OpenAI] = None
 _gemini_client: Optional[OpenAI] = None
 
 
-def _get_groq_client() -> OpenAI:
+def _get_groq_client() -> Optional[OpenAI]:
     global _groq_client
     if _groq_client is None:
         settings = get_settings()
         api_key = settings.GROQ_API_KEY or os.getenv("GROQ_API_KEY", "")
         if not api_key:
-            raise ValueError(
-                "GROQ_API_KEY not set. Add it to .env file as GROQ_API_KEY=gsk_..."
-            )
+            return None
         _groq_client = OpenAI(
             api_key=api_key,
             base_url=GROQ_BASE_URL,
@@ -392,61 +390,62 @@ def run_heimdall(
     ]
 
     llm_response_text = ""
-    last_err = None
+    last_err = "GROQ_API_KEY not configured" if groq is None else None
     tokens_limit = MAX_TOKENS
 
     # ---------------------------------------------------------------
     # Phase A: Try all Groq models with per-model rate-limit retries
     # ---------------------------------------------------------------
-    for model_name in FALLBACK_MODELS:
-        for attempt in range(3):
-            try:
-                response = groq.chat.completions.create(
-                    model=model_name,
-                    messages=messages,
-                    max_tokens=tokens_limit,
-                    temperature=TEMPERATURE,
-                )
-                llm_response_text = response.choices[0].message.content or ""
-                _audit("llm_call_complete", {
-                    "provider": "groq",
-                    "model": model_name,
-                    "tokens_used": response.usage.total_tokens if response.usage else 0,
-                })
-                last_err = None
-                break
-            except Exception as e:
-                last_err = e
-                err_msg = str(e).lower()
-                is_rate_limit = (
-                    "rate_limit" in err_msg or "429" in err_msg
-                    or "413" in err_msg or "tpm" in err_msg or "otpm" in err_msg
-                )
-
-                if is_rate_limit:
-                    if tokens_limit > 800:
-                        tokens_limit = 800
-                    # Honour Groq's retry-after hint if present
-                    wait_time = 2.0 * (attempt + 1)
-                    wait_match = re.search(r"try again in ([\d\.]+)s", err_msg)
-                    if wait_match:
-                        try:
-                            wait_time = float(wait_match.group(1)) + 0.5
-                        except ValueError:
-                            pass
-                    _audit("llm_rate_limit_retry", {
-                        "model": model_name, "attempt": attempt,
-                        "sleep_seconds": wait_time, "error": str(e)[:200],
+    if groq is not None:
+        for model_name in FALLBACK_MODELS:
+            for attempt in range(3):
+                try:
+                    response = groq.chat.completions.create(
+                        model=model_name,
+                        messages=messages,
+                        max_tokens=tokens_limit,
+                        temperature=TEMPERATURE,
+                    )
+                    llm_response_text = response.choices[0].message.content or ""
+                    _audit("llm_call_complete", {
+                        "provider": "groq",
+                        "model": model_name,
+                        "tokens_used": response.usage.total_tokens if response.usage else 0,
                     })
-                    if attempt == 2:
-                        break  # exhausted retries for this model
-                    time.sleep(min(wait_time, 20.0))
-                    continue
-                else:
-                    break  # non-rate-limit error, try next model
+                    last_err = None
+                    break
+                except Exception as e:
+                    last_err = e
+                    err_msg = str(e).lower()
+                    is_rate_limit = (
+                        "rate_limit" in err_msg or "429" in err_msg
+                        or "413" in err_msg or "tpm" in err_msg or "otpm" in err_msg
+                    )
 
-        if last_err is None:
-            break  # got a good response
+                    if is_rate_limit:
+                        if tokens_limit > 800:
+                            tokens_limit = 800
+                        # Honour Groq's retry-after hint if present
+                        wait_time = 2.0 * (attempt + 1)
+                        wait_match = re.search(r"try again in ([\d\.]+)s", err_msg)
+                        if wait_match:
+                            try:
+                                wait_time = float(wait_match.group(1)) + 0.5
+                            except ValueError:
+                                pass
+                        _audit("llm_rate_limit_retry", {
+                            "model": model_name, "attempt": attempt,
+                            "sleep_seconds": wait_time, "error": str(e)[:200],
+                        })
+                        if attempt == 2:
+                            break  # exhausted retries for this model
+                        time.sleep(min(wait_time, 20.0))
+                        continue
+                    else:
+                        break  # non-rate-limit error, try next model
+
+            if last_err is None:
+                break  # got a good response
 
     # ---------------------------------------------------------------
     # Phase B: Gemini fallback (only if Groq completely failed)
