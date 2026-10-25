@@ -15,6 +15,7 @@ from pydantic import BaseModel, Field, field_validator
 from src.schemas.ingest import IngestReport
 from src.schemas.claims import Claim, Attack, Defence
 from src.schemas.rulings import Ruling, ClassificationSummary, CountrySectorRange
+from src.schemas.debate import DebateBudget, DebateTerminationState, DebateTurnRecord
 
 
 # ---------------------------------------------------------------------------
@@ -26,6 +27,8 @@ class CaseStatus(str, Enum):
     REJECTED = "rejected"
     CLOSED = "closed"
     CLOSED_INCOMPLETE = "closed_incomplete"
+    DEBATE_STALLED = "debate_stalled"
+    DEBATE_LIMIT_HIT = "debate_limit_hit"
 
 
 class EventScope(BaseModel):
@@ -53,7 +56,8 @@ class VerificationVerdict(BaseModel):
 
 class RunRecord(BaseModel):
     """
-    Snapshot of an individual trial run (Run 1 or Run 2).
+    Snapshot of an individual trial run.
+    The convergence loop may accumulate multiple cycles in a single RunRecord.
     """
     run_no: int = Field(default=1, ge=1)
     evidence_index: List[str] = Field(default_factory=list)
@@ -66,11 +70,16 @@ class RunRecord(BaseModel):
     ranges: List[CountrySectorRange] = Field(default_factory=list)
     sufficiency: str = Field(default="pending", description="'sufficient', 'send_back', or 'incomplete'")
     missing: List[str] = Field(default_factory=list, description="Missing evidence categories if send_back")
+    # Open-ended debate audit log
+    debate_turns: List[DebateTurnRecord] = Field(default_factory=list)
 
 
 class CaseFile(BaseModel):
     """
     The central blackboard object: single source of truth shared across all agents.
+
+    The 'limits' dict is kept for backward compatibility with legacy code and
+    Supabase persistence. All new convergence-loop logic reads from 'budget'.
     """
     case_id: str = Field(..., description="Unique case identifier")
     question: str = Field(..., description="User question")
@@ -81,12 +90,14 @@ class CaseFile(BaseModel):
     ingest_report: Optional[IngestReport] = None
     runs: List[RunRecord] = Field(default_factory=list)
     limits: Dict[str, Any] = Field(default_factory=lambda: {
-        "max_runs": 2,
-        "max_rounds": 2,
         "tool_calls_used": 0,
         "tokens_used": 0,
         "limit_hit": False
     })
+    # Open-ended debate safety budgets (replaces max_rounds / max_runs)
+    budget: DebateBudget = Field(default_factory=DebateBudget)
+    # Judicial termination record written by the runner
+    termination: Optional[DebateTerminationState] = None
     final_briefing: Optional[str] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None

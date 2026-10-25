@@ -59,6 +59,13 @@ from src.schemas.case_file import (
     AuditEvent,
     HeimdallOutput,
 )
+from src.schemas.debate import (
+    DebateBudget,
+    DebateTerminationState,
+    DebateTerminationReason,
+    DebatePhase,
+    DebateTurnRecord,
+)
 
 __all__ = [
     # Ingest
@@ -114,4 +121,10 @@ __all__ = [
     "MemoryAction",
     "AuditEvent",
     "HeimdallOutput",
+    # Debate Convergence
+    "DebateBudget",
+    "DebateTerminationState",
+    "DebateTerminationReason",
+    "DebatePhase",
+    "DebateTurnRecord",
 ]
