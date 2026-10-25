@@ -105,13 +105,26 @@ class MemoryManager:
         Convenience wrapper supporting string or enum memory_type and scope.
         """
         if isinstance(memory_type, str):
-            try:
-                memory_type = MemoryType(memory_type)
-            except Exception:
+            mem_str = memory_type.lower().strip()
+            if mem_str in ("strategy", "search_strategy"):
+                memory_type = MemoryType.SEARCH_STRATEGY
+            elif mem_str in ("source", "source_lesson"):
                 memory_type = MemoryType.SOURCE_LESSON
+            elif mem_str in ("calculation", "calculation_method"):
+                memory_type = MemoryType.CALCULATION_METHOD
+            elif mem_str in ("verification", "verification_rule"):
+                memory_type = MemoryType.VERIFICATION_RULE
+            elif mem_str in ("ruling", "ruling_precedent"):
+                memory_type = MemoryType.RULING_PRECEDENT
+            else:
+                try:
+                    memory_type = MemoryType(mem_str)
+                except Exception:
+                    memory_type = MemoryType.SEARCH_STRATEGY
+
         if isinstance(scope, str):
             try:
-                scope = MemoryScope(scope)
+                scope = MemoryScope(scope.lower().strip())
             except Exception:
                 scope = MemoryScope.GLOBAL
 
