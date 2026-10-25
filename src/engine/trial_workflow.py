@@ -58,12 +58,29 @@ def run_heimdall(*args, **kwargs) -> Any:
     Gatekeeper & evidence gathering entry point.
     Can be monkeypatched in unit tests.
     """
+    if "case" in kwargs:
+        c = kwargs["case"]
+        missing_cats = []
+        if c.runs:
+            missing_cats = getattr(c.runs[-1], "missing", []) or []
+        event_id = c.scope.event_id if c.scope else None
+        as_of_str = str(c.as_of) if c.as_of else ""
+        return _real_run_heimdall(
+            case_id=c.case_id,
+            question=c.question,
+            as_of_date=as_of_str,
+            event_id=event_id,
+            run_no=kwargs.get("run_no", 1),
+            send_back_categories=missing_cats if kwargs.get("run_no", 1) > 1 else None,
+        )
     if "case_id" in kwargs:
         return _real_run_heimdall(
             case_id=kwargs["case_id"],
             question=kwargs.get("question", ""),
             as_of_date=kwargs.get("as_of_date", ""),
             event_id=kwargs.get("event_id"),
+            run_no=kwargs.get("run_no", 1),
+            send_back_categories=kwargs.get("send_back_categories"),
         )
     return {"status": "real", "new_evidence": [], "evidence_gaps": []}
 
@@ -100,19 +117,26 @@ from src.supabase_client import get_supabase_admin
 
 
 # ---------------------------------------------------------------------------
-# Console helpers
-# ---------------------------------------------------------------------------
+import sys
+
+def _safe_print(text: str = "") -> None:
+    try:
+        print(text)
+    except UnicodeEncodeError:
+        encoding = getattr(sys.stdout, "encoding", "ascii") or "ascii"
+        print(text.encode(encoding, errors="replace").decode(encoding))
+
 
 def print_banner(title: str) -> None:
-    print("\n" + "=" * 80)
-    print(f"  {title}")
-    print("=" * 80)
+    _safe_print("\n" + "=" * 80)
+    _safe_print(f"  {title}")
+    _safe_print("=" * 80)
 
 
 def print_section(title: str) -> None:
-    print("\n" + "-" * 80)
-    print(f">>> {title}")
-    print("-" * 80)
+    _safe_print("\n" + "-" * 80)
+    _safe_print(f">>> {title}")
+    _safe_print("-" * 80)
 
 
 def print_budget_status(budget: DebateBudget, cycle: int) -> None:
@@ -440,7 +464,7 @@ async def _execute_debate_cycles(case: CaseFile, run_no: int = 1) -> Dict[str, A
     # -----------------------------------------------------------------------
     if termination_reason == DebateTerminationReason.LIMIT_HIT:
         case.status = CaseStatus.DEBATE_LIMIT_HIT
-        print_banner("⚠ DEBATE TERMINATED — SAFETY BUDGET EXHAUSTED")
+        print_banner("[!] DEBATE TERMINATED - SAFETY BUDGET EXHAUSTED")
         print(f"Budget Hit   : {budget.limit_hit}")
         print(f"Annotation   : {termination_annotation}")
         print("Note         : Case is closed with available evidence. Odin will adjudicate what exists.")
@@ -448,13 +472,13 @@ async def _execute_debate_cycles(case: CaseFile, run_no: int = 1) -> Dict[str, A
 
     elif termination_reason == DebateTerminationReason.STALLED:
         case.status = CaseStatus.DEBATE_STALLED
-        print_banner("⚠ DEBATE STALLED — NO FURTHER PROGRESS POSSIBLE")
+        print_banner("[!] DEBATE STALLED - NO FURTHER PROGRESS POSSIBLE")
         print(f"Annotation   : {termination_annotation}")
         print("Note         : Case is closed with available evidence. Odin will adjudicate what exists.")
 
     else:
         # CONVERGED
-        print_banner("✓ DEBATE CONVERGED — STATE-DRIVEN CONSENSUS REACHED")
+        print_banner("[OK] DEBATE CONVERGED - STATE-DRIVEN CONSENSUS REACHED")
         print(f"Annotation   : {termination_annotation}")
 
     # -----------------------------------------------------------------------
@@ -633,16 +657,16 @@ def run_convergence_debate(case: CaseFile) -> CaseFile:
 
         # Send-back condition:
         # Odin found insufficient evidence AND we still have evidence run budget
-        if sufficiency == "insufficient" and budget.evidence_runs < max_evidence_runs:
+        if sufficiency in ("insufficient", "send_back") and budget.evidence_runs < max_evidence_runs:
             print(
-                f"\n[Runner] Odin evaluated Run {run_no}: INSUFFICIENT. Missing: {missing}. "
+                f"\n[Runner] Odin evaluated Run {run_no}: {sufficiency.upper()}. Missing: {missing}. "
                 f"Sending back to Heimdall for evidence run {budget.evidence_runs + 1}/{max_evidence_runs}..."
             )
             case.runs.append(RunRecord(run_no=budget.evidence_runs + 1))
             continue
 
         # Terminal state determination
-        if sufficiency in ("insufficient", "incomplete"):
+        if sufficiency in ("insufficient", "incomplete", "send_back"):
             reason = DebateTerminationReason.LIMIT_HIT
             budget.limit_hit = "evidence_run_budget_exhausted"
             case.status = CaseStatus.CLOSED_INCOMPLETE
@@ -945,7 +969,7 @@ async def run_trial_pipeline(
         DebateTerminationReason.LIMIT_HIT,
         DebateTerminationReason.STALLED,
     ):
-        print_section("⚠ INCOMPLETE CASE NOTICE")
+        print_section("[!] INCOMPLETE CASE NOTICE")
         print(f"This case was closed due to: {termination.reason.value.upper()}")
         print(f"Budget hit  : {termination.budget_hit or 'N/A'}")
         print(f"Annotation  : {termination.annotation}")
@@ -953,40 +977,6 @@ async def run_trial_pipeline(
         print(f"Missing evidence categories may apply to the briefing below.")
         if completed_case.status == CaseStatus.OPEN:
             completed_case.status = CaseStatus.CLOSED_INCOMPLETE
-
-    # -----------------------------------------------------------------------
-    # Step 5b: Send-Back & Run 2 Multi-Run Execution (FR1.4, FR5.4, Acceptance Check 8)
-    # -----------------------------------------------------------------------
-    suff_status = getattr(run1.sufficiency, "status", str(run1.sufficiency or ""))
-    if (
-        (judicial_output.get("action") == "send_back" or suff_status == "send_back")
-        and len(completed_case.runs) < completed_case.limits.get("max_runs", 2)
-    ):
-        print_banner("ODIN ISSUED SEND-BACK: INITIATING RUN 2 WITH TARGETED RE-SEARCH")
-        missing_cats = run1.missing if hasattr(run1, "missing") and run1.missing else []
-        print(f"Missing Evidence Categories Identified by Odin: {missing_cats}")
-
-        # FR1.4: Heimdall re-searches targeting missing categories
-        print_section("HEIMDALL RE-SEARCH FOR RUN 2")
-        run_heimdall(
-            case_id=case_id,
-            question=question,
-            as_of_date=as_of,
-            event_id=event_id,
-            send_back_categories=missing_cats,
-        )
-
-        # Append Run 2 and execute adversarial debate with new evidence
-        completed_case.runs.append(RunRecord(run_no=2))
-        completed_case = await run_thor_and_loki_debate(completed_case)
-
-        # Phase 3 Run 2 Adjudication (terminates loop as run_no >= max_runs = 2)
-        completed_case, judicial_output = odin.evaluate_case(completed_case, run_no=2)
-        run2 = completed_case.runs[1]
-        print_section("ODIN'S FINAL VERDICT ON RUN 2")
-        print(f"Total Claims Adjudicated in Run 2 : {len(run2.rulings)}")
-        for r in run2.rulings:
-            print(f"  * Ruling on {r.claim_id}: [{r.outcome.value.upper()}] ({r.basis.value}) - {r.reasoning}")
 
     if completed_case.final_briefing:
         print_banner("ODIN'S FINAL EXECUTIVE BRIEFING (OKF FORMAT)")
@@ -996,9 +986,8 @@ async def run_trial_pipeline(
     # Step 6: Distill Post-Trial Agent Memories (FR6.1)
     # -----------------------------------------------------------------------
     try:
-        distill_agent_memories_post_trial(completed_case, run_no=1)
-        if len(completed_case.runs) > 1:
-            distill_agent_memories_post_trial(completed_case, run_no=2)
+        for idx in range(len(completed_case.runs)):
+            distill_agent_memories_post_trial(completed_case, run_no=idx + 1)
     except Exception as e:
         print(f"[Warning] Post-trial memory distillation skipped: {e}")
 
@@ -1043,7 +1032,7 @@ async def run_trial_pipeline(
         "reasons": reasons,
         "wake_next": wake_next,
         "termination": termination.model_dump(mode="json") if termination else None,
-        "debate_cycles": cycle if "cycle" in dir() else 0,
+        "debate_cycles": getattr(completed_case.budget, "turns_used", 0) if completed_case.budget else 0,
         "case_file": completed_case,
         "judicial_output": judicial_output,
         "bundle_paths": {k: str(v) for k, v in bundle_paths.items()},

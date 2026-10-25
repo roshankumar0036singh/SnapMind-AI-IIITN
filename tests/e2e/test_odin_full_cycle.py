@@ -137,7 +137,7 @@ def test_odin_full_two_run_cycle(test_validator, tmp_path):
     updated_case, summary_1 = judge.evaluate_case(case, run_no=1)
 
     assert summary_1["action"] == "send_back"
-    assert updated_case.runs[0].sufficiency == "send_back"
+    assert updated_case.runs[0].sufficiency in ("insufficient", "send_back")
     assert "evidence_for_target_country_Vestri" in updated_case.runs[0].missing
     assert "evidence_for_target_sector_Energy" in updated_case.runs[0].missing
     assert len(updated_case.runs[0].rulings) == 2

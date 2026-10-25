@@ -148,7 +148,7 @@ class OdinJudge:
             except Exception:
                 pass
 
-            result_summary["action"] = "insufficient"
+            result_summary["action"] = "send_back"
             return case_file, result_summary
 
         # 6. Phase 5: Evidence is sufficient -> compile final briefing & export deliverables
