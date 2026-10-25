@@ -209,7 +209,35 @@ def search_docs(
     # Injection policy: exclude injection-flagged by default
     bm25_q = bm25_q.eq("is_injection_attempt", False)
 
-    bm25_q = bm25_q.ilike("content", f"%{query}%").limit(top_k * 3)
+    # Multi-term / question keyword matching
+    clean_query = query.strip()
+    words = [w for w in clean_query.split() if len(w) > 2]
+    if len(words) > 3:
+        STOPWORDS = {
+            "what", "when", "where", "which", "with", "from", "that", "this", "these", "those",
+            "have", "been", "were", "will", "would", "could", "should", "give", "high", "range",
+            "exposed", "about", "before", "after", "between", "under", "over", "does", "did",
+            "many", "much", "more", "most", "some", "such", "than", "then", "into", "onto",
+            "also", "only", "other", "their", "there", "they", "them", "then", "your", "ours",
+            "january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"
+        }
+        tokens = re.findall(r'[A-Za-z0-9_-]+', clean_query)
+        keywords = [t for t in tokens if len(t) > 3 and t.lower() not in STOPWORDS]
+        caps = [t for t in keywords if t[0].isupper() or (t.startswith("E") and any(c.isdigit() for c in t))]
+        others = [t for t in keywords if t not in caps]
+        search_terms = (caps + others)[:6]
+        if search_terms:
+            or_conditions = []
+            for t in search_terms:
+                or_conditions.append(f"content.ilike.%{t}%")
+                or_conditions.append(f"title.ilike.%{t}%")
+            bm25_q = bm25_q.or_(",".join(or_conditions))
+        else:
+            bm25_q = bm25_q.or_(f"content.ilike.%{clean_query}%,title.ilike.%{clean_query}%")
+    else:
+        bm25_q = bm25_q.or_(f"content.ilike.%{clean_query}%,title.ilike.%{clean_query}%")
+
+    bm25_q = bm25_q.limit(top_k * 4)
     raw_results = bm25_q.execute().data or []
 
     # --- Post-filter: event scope ---
@@ -227,6 +255,8 @@ def search_docs(
 
     filtered = [d for d in raw_results if _passes_event_filter(d)]
 
+    # Prioritize event-specific documents over background profiles
+    filtered.sort(key=lambda d: 0 if (d.get("event_id") or "NONE").upper() not in ("NONE", "") else 1)
     # --- Scan retrieved content for injection patterns ---
     results = []
     for doc in filtered[:top_k]:

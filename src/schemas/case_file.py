@@ -6,6 +6,7 @@ Every agent reads and writes through these models — validated before persisten
 """
 
 from __future__ import annotations
+import uuid
 from datetime import date, datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional
@@ -193,12 +194,12 @@ class TradeTableIssue(BaseModel):
 
 
 class EvidenceIndexEntry(BaseModel):
-    entry_id: str
-    doc_id: str
+    entry_id: str = Field(default_factory=lambda: str(uuid.uuid4())[:8])
+    doc_id: Optional[str] = None
     title: str = ""
     source: str = ""
     tier: str = "T4"
-    date: Optional[date] = None
+    date: Optional[Any] = None
     event_id: Optional[str] = None
     topic: str = ""
     summary: str = ""
