@@ -1,0 +1,45 @@
+﻿# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+
+# Data and Stores (Keep directories via .gitkeep, ignore actual data)
+data/runemark_raw/*
+!data/runemark_raw/.gitkeep
+data/runemark_processed/*
+!data/runemark_processed/.gitkeep
+data/vector_store/*
+!data/vector_store/.gitkeep
+data/test_packs/*
+!data/test_packs/.gitkeep
+
+# Persistent Case Artifacts
+saved_cases/*
+!saved_cases/.gitkeep
+
+# Local Context & Proposal Docs
+CONTEXT_UPDATED.md
+PROPOSED_FILE_STRUCTURE.md
+
+# Environment and Secrets
+.env
+.env.local
+*.pem
+*.key
+
+# IDE and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Test and Coverage
+.pytest_cache/
+.coverage
+htmlcov/
