@@ -65,17 +65,24 @@ from src.config import get_settings
 # LLM provider setup — Groq primary, Gemini fallback
 # ---------------------------------------------------------------------------
 GROQ_BASE_URL = "https://api.groq.com/openai/v1"
-GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-20b")
+GROQ_MODEL = os.getenv("GROQ_MODEL", "qwen/qwen3.8-27b")
 FALLBACK_MODELS = list(dict.fromkeys([
     GROQ_MODEL,
-    "openai/gpt-oss-120b",
     "qwen/qwen3.8-27b",
+    "openai/gpt-oss-120b",
+    "openai/gpt-oss-20b",
 ]))
-MAX_TOKENS = int(os.getenv("GROQ_MAX_TOKENS", "1500"))
+MAX_TOKENS = int(os.getenv("GROQ_MAX_TOKENS", "2500"))
 TEMPERATURE = 0.0  # Deterministic — evidence analysis, not creative writing
 
 GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai/"
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
+settings = get_settings()
+GEMINI_MODEL = settings.GEMINI_MODEL or os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite")
+GEMINI_FALLBACK_MODELS = list(dict.fromkeys([
+    GEMINI_MODEL,
+    settings.GEMINI_FALLBACK_MODEL or "gemini-2.5-flash",
+    "gemini-2.5-flash",
+]))
 
 _groq_client: Optional[OpenAI] = None
 _gemini_client: Optional[OpenAI] = None
@@ -118,12 +125,110 @@ def _now_iso() -> str:
 # JSON extraction helper
 # ---------------------------------------------------------------------------
 
+def _repair_truncated_json(text: str) -> Optional[Dict[str, Any]]:
+    """
+    Repair truncated JSON strings (e.g. cut off by max_tokens).
+    Balances unclosed quotes, brackets, and braces.
+    """
+    s = text.strip()
+    if not s or not s.startswith('{'):
+        return None
+
+    stack = []
+    in_string = False
+    escape = False
+
+    for c in s:
+        if in_string:
+            if escape:
+                escape = False
+            elif c == '\\':
+                escape = True
+            elif c == '"':
+                in_string = False
+        else:
+            if c == '"':
+                in_string = True
+            elif c in ('{', '['):
+                stack.append(c)
+            elif c == '}':
+                if stack and stack[-1] == '{':
+                    stack.pop()
+            elif c == ']':
+                if stack and stack[-1] == '[':
+                    stack.pop()
+
+    repaired = s
+    if in_string:
+        repaired += '"'
+
+    repaired = re.sub(r',\s*$', '', repaired)
+    repaired = re.sub(r':\s*"?"?\s*$', '', repaired)
+
+    for open_char in reversed(stack):
+        if open_char == '{':
+            repaired += '}'
+        elif open_char == '[':
+            repaired += ']'
+
+    try:
+        res = json.loads(repaired)
+        if isinstance(res, dict):
+            return res
+    except Exception:
+        pass
+
+    # Progressively peel back to previous key-value separator
+    for _ in range(50):
+        idx = max(repaired[:-1].rfind(','), repaired[:-1].rfind('{'), repaired[:-1].rfind('['))
+        if idx <= 0:
+            break
+        candidate = repaired[:idx]
+        cand_stack = []
+        cand_str = False
+        cand_esc = False
+        for ch in candidate:
+            if cand_str:
+                if cand_esc:
+                    cand_esc = False
+                elif ch == '\\':
+                    cand_esc = True
+                elif ch == '"':
+                    cand_str = False
+            else:
+                if ch == '"':
+                    cand_str = True
+                elif ch in ('{', '['):
+                    cand_stack.append(ch)
+                elif ch == '}':
+                    if cand_stack and cand_stack[-1] == '{':
+                        cand_stack.pop()
+                elif ch == ']':
+                    if cand_stack and cand_stack[-1] == '[':
+                        cand_stack.pop()
+        for oc in reversed(cand_stack):
+            if oc == '{':
+                candidate += '}'
+            elif oc == '[':
+                candidate += ']'
+        try:
+            res = json.loads(candidate)
+            if isinstance(res, dict):
+                return res
+        except Exception:
+            repaired = candidate
+
+    return None
+
+
 def _extract_json(text: str) -> Optional[Dict[str, Any]]:
     """
     Extract the first valid JSON object from an LLM response.
     Handles: clean JSON, code-fence wrappers, preamble text, and
-    truncated output (tries progressively shorter trailing substrings).
+    truncated output (uses bracket stack balance and string repair).
     """
+    if not text or not text.strip():
+        return None
     text = text.strip()
 
     # Strip ```json ... ``` or ``` ... ``` code fences
@@ -133,7 +238,9 @@ def _extract_json(text: str) -> Optional[Dict[str, Any]]:
 
     # Try direct parse
     try:
-        return json.loads(text)
+        res = json.loads(text)
+        if isinstance(res, dict):
+            return res
     except json.JSONDecodeError:
         pass
 
@@ -142,25 +249,24 @@ def _extract_json(text: str) -> Optional[Dict[str, Any]]:
     if start == -1:
         return None
 
-    # Try from `start` to end
+    candidate = text[start:]
     try:
-        return json.loads(text[start:])
+        res = json.loads(candidate)
+        if isinstance(res, dict):
+            return res
     except json.JSONDecodeError:
         pass
 
-    # The JSON may be truncated — walk backwards from the end to find a valid close
-    candidate = text[start:]
-    last_brace = len(candidate)
-    for _ in range(50):  # max 50 shrink attempts
-        last_brace = candidate.rfind('}', 0, last_brace)
-        if last_brace == -1:
-            break
+    end = candidate.rfind('}')
+    if end != -1 and end > 0:
         try:
-            return json.loads(candidate[:last_brace + 1])
+            res = json.loads(candidate[:end + 1])
+            if isinstance(res, dict):
+                return res
         except json.JSONDecodeError:
             pass
 
-    return None
+    return _repair_truncated_json(candidate)
 
 
 # ---------------------------------------------------------------------------
@@ -424,31 +530,48 @@ def run_heimdall(
         {"role": "user", "content": user_prompt},
     ]
 
+    raw_output: Optional[Dict[str, Any]] = None
     llm_response_text = ""
-    last_err = "GROQ_API_KEY not configured" if groq is None else None
-    tokens_limit = MAX_TOKENS
+    last_err: Optional[Any] = "GROQ_API_KEY not configured" if groq is None else None
 
     # ---------------------------------------------------------------
     # Phase A: Try all Groq models with per-model rate-limit retries
     # ---------------------------------------------------------------
     if groq is not None:
         for model_name in FALLBACK_MODELS:
+            tokens_limit = MAX_TOKENS
             for attempt in range(3):
                 try:
-                    response = groq.chat.completions.create(
-                        model=model_name,
-                        messages=messages,
-                        max_tokens=tokens_limit,
-                        temperature=TEMPERATURE,
-                    )
-                    llm_response_text = response.choices[0].message.content or ""
-                    _audit("llm_call_complete", {
-                        "provider": "groq",
+                    call_kwargs: Dict[str, Any] = {
                         "model": model_name,
-                        "tokens_used": response.usage.total_tokens if response.usage else 0,
-                    })
-                    last_err = None
-                    break
+                        "messages": messages,
+                        "max_tokens": tokens_limit,
+                        "temperature": TEMPERATURE,
+                    }
+                    if "qwen" in model_name or "gpt-oss" in model_name:
+                        call_kwargs["response_format"] = {"type": "json_object"}
+
+                    response = groq.chat.completions.create(**call_kwargs)
+                    llm_response_text = response.choices[0].message.content or ""
+                    parsed = _extract_json(llm_response_text)
+                    if parsed is not None and isinstance(parsed, dict):
+                        raw_output = parsed
+                        last_err = None
+                        _audit("llm_call_complete", {
+                            "provider": "groq",
+                            "model": model_name,
+                            "tokens_used": response.usage.total_tokens if response.usage else 0,
+                        })
+                        break
+                    else:
+                        _audit("llm_output_unparseable", {
+                            "provider": "groq",
+                            "model": model_name,
+                            "attempt": attempt,
+                            "preview": llm_response_text[:300],
+                        })
+                        last_err = f"Model {model_name} returned unparseable output"
+
                 except Exception as e:
                     last_err = e
                     err_msg = str(e).lower()
@@ -458,9 +581,8 @@ def run_heimdall(
                     )
 
                     if is_rate_limit:
-                        if tokens_limit > 800:
-                            tokens_limit = 800
-                        # Honour Groq's retry-after hint if present
+                        if "otpm" in err_msg and tokens_limit > 1200:
+                            tokens_limit = 1200
                         wait_time = 2.0 * (attempt + 1)
                         wait_match = re.search(r"try again in ([\d\.]+)s", err_msg)
                         if wait_match:
@@ -479,37 +601,47 @@ def run_heimdall(
                     else:
                         break  # non-rate-limit error, try next model
 
-            if last_err is None:
-                break  # got a good response
+            if raw_output is not None:
+                break  # got valid JSON
 
     # ---------------------------------------------------------------
-    # Phase B: Gemini fallback (only if Groq completely failed)
+    # Phase B: Gemini fallback (if Groq completely failed or didn't produce valid JSON)
     # ---------------------------------------------------------------
-    if last_err is not None:
+    if raw_output is None:
         gemini = _get_gemini_client()
         if gemini is not None:
-            _audit("llm_gemini_fallback", {"groq_error": str(last_err)[:200]})
-            try:
-                response = gemini.chat.completions.create(
-                    model=GEMINI_MODEL,
-                    messages=messages,
-                    max_tokens=MAX_TOKENS,
-                    temperature=TEMPERATURE,
-                )
-                llm_response_text = response.choices[0].message.content or ""
-                _audit("llm_call_complete", {
-                    "provider": "gemini",
-                    "model": GEMINI_MODEL,
-                    "tokens_used": response.usage.total_tokens if response.usage else 0,
-                })
-                last_err = None
-            except Exception as e:
-                last_err = e
-                _audit("llm_gemini_failed", {"error": str(e)[:300]})
+            _audit("llm_gemini_fallback", {"groq_error": str(last_err)[:200] if last_err else "No valid JSON from Groq"})
+            for g_model in GEMINI_FALLBACK_MODELS:
+                for attempt in range(2):
+                    try:
+                        response = gemini.chat.completions.create(
+                            model=g_model,
+                            messages=messages,
+                            max_tokens=MAX_TOKENS,
+                            temperature=TEMPERATURE,
+                            response_format={"type": "json_object"},
+                        )
+                        llm_response_text = response.choices[0].message.content or ""
+                        parsed = _extract_json(llm_response_text)
+                        if parsed is not None and isinstance(parsed, dict):
+                            raw_output = parsed
+                            last_err = None
+                            _audit("llm_call_complete", {
+                                "provider": "gemini",
+                                "model": g_model,
+                                "tokens_used": response.usage.total_tokens if response.usage else 0,
+                            })
+                            break
+                    except Exception as e:
+                        last_err = e
+                        _audit("llm_gemini_failed", {"model": g_model, "attempt": attempt, "error": str(e)[:300]})
+                        time.sleep(1.0)
+                if raw_output is not None:
+                    break
         else:
             _audit("llm_gemini_skipped", {"reason": "GEMINI_API_KEY not set"})
 
-    if last_err is not None:
+    if raw_output is None:
         _audit("llm_call_failed", {"error": str(last_err), "traceback": traceback.format_exc()[:500]})
         return _make_failed_output(
             case_id=case_id,
@@ -523,18 +655,6 @@ def run_heimdall(
     # ------------------------------------------------------------------
     # Step 3: Parse and validate LLM JSON output
     # ------------------------------------------------------------------
-    raw_output = _extract_json(llm_response_text)
-    if raw_output is None:
-        _audit("json_parse_failed", {"raw_response_preview": llm_response_text[:500]})
-        return _make_failed_output(
-            case_id=case_id,
-            event_name=event_id or "Unverified Event",
-            run_no=run_no,
-            reason="LLM did not return valid JSON.",
-            audit_events=audit_events,
-            memory_actions=memory_actions,
-        )
-
     # Ensure case_id and event_name exist
     raw_output.setdefault("case_id", case_id)
     raw_output.setdefault("event_name", event_id or "Unverified Event")
@@ -562,6 +682,8 @@ def run_heimdall(
 
     # If LLM put a doc_id (like ORV-0002) in event_id, normalize it
     if output.scope.event_id and (output.scope.event_id.startswith("ORV-") or output.scope.event_id.startswith("DOC-")):
+        output.scope.event_id = detected_event_id
+    if not output.scope.event_id and detected_event_id:
         output.scope.event_id = detected_event_id
     output.event_id = output.scope.event_id
 

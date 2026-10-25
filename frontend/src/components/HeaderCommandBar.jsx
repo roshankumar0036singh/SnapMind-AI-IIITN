@@ -68,29 +68,37 @@ export default function HeaderCommandBar({
             </span>
           </div>
 
-          {/* Run 1 vs Run 2 Segmented Control */}
+          {/* Dynamic Run Segmented Control */}
           {viewMode === "console" && (
             <div className="flex items-center p-0.5 rounded-md bg-white/[0.04] border border-white/[0.08] text-xs">
-              <button
-                onClick={() => onRunChange(1)}
-                className={`px-3 py-1 rounded text-xs font-medium transition ${
-                  activeRunNo === 1
-                    ? "bg-white/[0.14] text-white shadow-sm"
-                    : "text-slate-400 hover:text-slate-200"
-                }`}
-              >
-                Run 1 <span className="text-[10px] text-amber-400 font-mono ml-1">Send-Back</span>
-              </button>
-              <button
-                onClick={() => onRunChange(2)}
-                className={`px-3 py-1 rounded text-xs font-medium transition ${
-                  activeRunNo === 2
-                    ? "bg-white/[0.14] text-white shadow-sm"
-                    : "text-slate-400 hover:text-slate-200"
-                }`}
-              >
-                Run 2 <span className="text-[10px] text-emerald-400 font-mono ml-1">Verdict</span>
-              </button>
+              {(caseData?.runs && caseData.runs.length > 0
+                ? caseData.runs
+                : [{ run_no: 1, sufficiency: "sufficient" }]
+              ).map((run, idx) => {
+                const rNum = run.run_no || idx + 1;
+                const isInsufficient = run.sufficiency === "insufficient";
+                const isSelected = activeRunNo === rNum;
+                return (
+                  <button
+                    key={rNum}
+                    onClick={() => onRunChange(rNum)}
+                    className={`px-3 py-1 rounded text-xs font-medium transition ${
+                      isSelected
+                        ? "bg-white/[0.14] text-white shadow-sm"
+                        : "text-slate-400 hover:text-slate-200"
+                    }`}
+                  >
+                    Run {rNum}{" "}
+                    <span
+                      className={`text-[10px] font-mono ml-1 ${
+                        isInsufficient ? "text-amber-400" : "text-emerald-400"
+                      }`}
+                    >
+                      {isInsufficient ? "Send-Back" : "Verdict"}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           )}
 

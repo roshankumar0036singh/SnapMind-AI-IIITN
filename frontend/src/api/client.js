@@ -10,12 +10,22 @@ const API_BASE = "http://127.0.0.1:8000/api";
 
 export async function fetchHealth() {
   try {
-    const res = await fetch(`${API_BASE}/health`, { signal: AbortSignal.timeout(2000) });
-    if (res.ok) return await res.json();
+    const res = await fetch(`${API_BASE}/health`, { signal: AbortSignal.timeout(3000) });
+    if (res.ok) {
+      const data = await res.json();
+      return {
+        status: data.status === "healthy" ? "online" : data.status,
+        supabase_connected: data.supabase_connected ?? false,
+        default_clock: data.default_clock || "2027-01-25",
+        total_manifest_docs: 76,
+        graph_nodes_loaded: 10,
+        graph_edges_loaded: 7,
+      };
+    }
   } catch {
     // offline fallback
   }
-  return { status: "online (cached)", total_manifest_docs: 76, graph_nodes_loaded: 10, graph_edges_loaded: 7 };
+  return { status: "offline (mock)", supabase_connected: false, default_clock: "2027-01-25", total_manifest_docs: 76, graph_nodes_loaded: 10, graph_edges_loaded: 7 };
 }
 
 // ---------------------------------------------------------------------------
@@ -91,25 +101,29 @@ export async function fetchCases() {
   }
   return [
     {
-      case_id: CASE_METADATA.case_id,
-      event_id: CASE_METADATA.event_id,
-      title: CASE_METADATA.title,
-      as_of_date: CASE_METADATA.as_of_date,
-      target_countries: CASE_METADATA.target_countries,
-      target_sectors: CASE_METADATA.target_sectors,
-      status: CASE_METADATA.status,
-      total_runs: 2,
+      case_id: "CASE_E5_ORVAN_CORRIDOR",
+      event_id: "E5",
+      title: "Orvan grain corridor collapse",
+      as_of_date: "2027-01-25",
+      target_countries: ["Midgard", "Tolan"],
+      target_sectors: ["wheat", "maize"],
+      status: "closed",
+      total_runs: 1,
       briefing_available: true,
     }
   ];
 }
 
-export async function fetchCase(caseId = "CASE-2027-E5-ORVAN") {
+export async function fetchCase(caseId = "CASE_E5_ORVAN_CORRIDOR") {
   try {
-    const res = await fetch(`${API_BASE}/cases/${caseId}`, { signal: AbortSignal.timeout(3000) });
+    const res = await fetch(`${API_BASE}/cases/${caseId}`, { signal: AbortSignal.timeout(5000) });
     if (res.ok) return await res.json();
-  } catch {
-    // fallback
+    if (res.status === 404 && caseId !== "CASE_E5_ORVAN_CORRIDOR") {
+      const fallbackRes = await fetch(`${API_BASE}/cases/CASE_E5_ORVAN_CORRIDOR`, { signal: AbortSignal.timeout(5000) });
+      if (fallbackRes.ok) return await fallbackRes.json();
+    }
+  } catch (err) {
+    console.warn("fetchCase network error, using fallback:", err);
   }
   return {
     case_id: CASE_METADATA.case_id,
@@ -146,9 +160,11 @@ export async function runTrialPipeline(question, asOf = "2027-01-25", eventId = 
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ question, as_of: asOf, event_id: eventId }),
-      signal: AbortSignal.timeout(30000),
+      signal: AbortSignal.timeout(180000), // 3-minute allowance for multi-agent LLM workflow
     });
-    if (res.ok) return await res.json();
+    if (res.ok) {
+      return await res.json();
+    }
   } catch (e) {
     console.warn("Trial pipeline fallback:", e);
   }
