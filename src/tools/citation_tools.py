@@ -99,7 +99,7 @@ class CitationValidator:
             doc_data = self._local_docs[doc_id]
         else:
             try:
-                res = self.client.table("runemark_documents").select("*").eq("doc_id", doc_id).execute()
+                res = self.admin.table("runemark_documents").select("*").eq("doc_id", doc_id).execute()
                 if res.data and len(res.data) > 0:
                     doc_data = res.data[0]
             except Exception:
@@ -219,7 +219,7 @@ class CitationValidator:
 
         if row_data is None:
             try:
-                res = self.client.table("trade_rows").select("*").eq("table_id", table_id).eq("row_no", first_row_no).execute()
+                res = self.admin.table("trade_rows").select("*").eq("table_id", table_id).eq("row_no", first_row_no).execute()
                 if res.data and len(res.data) > 0:
                     row_data = res.data[0]
             except Exception:

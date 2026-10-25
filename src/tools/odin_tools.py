@@ -103,7 +103,7 @@ def get_doc(
     row = result.data[0]
 
     # As-of date gate
-    pub_date_str = row.get("publication_date")
+    pub_date_str = str(row.get("pub_date") or row.get("publication_date") or "")
     if as_of and pub_date_str:
         try:
             pub_date = date.fromisoformat(pub_date_str[:10])
