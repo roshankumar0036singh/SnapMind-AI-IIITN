@@ -229,7 +229,14 @@ def get_graph_subgraph(country: str = "Midgard", sector: Optional[str] = None, m
     try:
         from src.graph.store import KnowledgeGraphStore
         kg = KnowledgeGraphStore()
-        sg = kg.get_subgraph(country=country, sector=sector, max_depth=max_depth)
+        c_clean = country.lower().strip() if country else ""
+        seed_nodes = [
+            nid for nid, node in kg.nodes_data.items()
+            if (c_clean and (c_clean in nid.lower() or (node.country and c_clean in node.country.lower())))
+        ]
+        if not seed_nodes:
+            seed_nodes = list(kg.nodes_data.keys())[:3]
+        sg = kg.get_subgraph(seed_node_ids=seed_nodes, max_depth=max_depth)
         return sg.model_dump(mode="json") if hasattr(sg, "model_dump") else sg
     except Exception as e:
         return {"nodes": [], "edges": [], "triplets": [], "paths": [], "citations": [], "error": str(e)}
@@ -241,8 +248,38 @@ def get_graph_paths(target_country: str = "Midgard", source_event: str = "Orvan"
     try:
         from src.graph.store import KnowledgeGraphStore
         kg = KnowledgeGraphStore()
-        paths = kg.find_paths(target_country=target_country, source_event=source_event)
-        return [p.model_dump(mode="json") if hasattr(p, "model_dump") else p for p in paths]
+        c_clean = target_country.lower().strip() if target_country else "midgard"
+        e_clean = source_event.lower().strip() if source_event else "orvan"
+
+        # Resolve candidate source IDs (e.g. disruption/chokepoint/agreement matching event)
+        src_candidates = [
+            nid for nid in kg.nodes_data
+            if e_clean in nid.lower() and any(k in nid.lower() for k in ["disruption", "chokepoint", "agreement", "event"])
+        ]
+        if not src_candidates:
+            src_candidates = [nid for nid in kg.nodes_data if e_clean in nid.lower()]
+        if not src_candidates:
+            src_candidates = [nid for nid in kg.nodes_data if "disruption" in nid.lower()]
+
+        # Resolve candidate target IDs (e.g. nation matching target country)
+        tgt_candidates = [
+            nid for nid in kg.nodes_data
+            if c_clean in nid.lower() and "nation:" in nid.lower()
+        ]
+        if not tgt_candidates:
+            tgt_candidates = [nid for nid in kg.nodes_data if c_clean in nid.lower()]
+
+        all_paths = []
+        seen_summaries = set()
+        for s_id in src_candidates:
+            for t_id in tgt_candidates:
+                if s_id != t_id:
+                    for p in kg.find_paths(source_id=s_id, target_id=t_id, max_depth=4):
+                        if p.summary not in seen_summaries:
+                            seen_summaries.add(p.summary)
+                            all_paths.append(p.model_dump(mode="json") if hasattr(p, "model_dump") else p)
+
+        return all_paths
     except Exception:
         return []
 
@@ -253,9 +290,11 @@ def get_graph_bottlenecks(country: str = "Midgard", sector: Optional[str] = "Whe
     try:
         from src.graph.store import KnowledgeGraphStore
         kg = KnowledgeGraphStore()
-        return kg.find_bottlenecks(country=country, sector=sector)
-    except Exception:
-        return {"bottlenecks": [], "substitutions": []}
+        bottlenecks = kg.detect_bottlenecks(target_country=country, sector=sector)
+        substitutions = kg.detect_substitutions(target_country=country, sector=sector)
+        return {"bottlenecks": bottlenecks, "substitutions": substitutions}
+    except Exception as e:
+        return {"bottlenecks": [], "substitutions": [], "error": str(e)}
 
 
 # -----------------------------------------------------------------------------
