@@ -28,14 +28,19 @@ import { fetchCase, runTrialPipeline } from "./api/client";
 export default function App() {
   const [viewMode, setViewMode] = useState("showcase"); // "showcase" or "console"
   const [activeTab, setActiveTab] = useState("overview");
-  const [activeRunNo, setActiveRunNo] = useState(2);
+  const [activeRunNo, setActiveRunNo] = useState(1);
   const [inspectedDocId, setInspectedDocId] = useState(null);
   const [briefingOpen, setBriefingOpen] = useState(false);
   const [caseData, setCaseData] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    fetchCase().then(setCaseData);
+    fetchCase().then((data) => {
+      setCaseData(data);
+      if (data?.runs?.length) {
+        setActiveRunNo(data.runs.length);
+      }
+    });
   }, []);
 
   const handleRunInvestigation = async (question, asOf) => {
@@ -44,6 +49,9 @@ export default function App() {
       const res = await runTrialPipeline(question, asOf, caseData?.scope?.event_id || "E5");
       if (res?.case_file) {
         setCaseData(res.case_file);
+        if (res.case_file.runs?.length) {
+          setActiveRunNo(res.case_file.runs.length);
+        }
       }
     } finally {
       setIsLoading(false);
@@ -65,9 +73,11 @@ export default function App() {
   };
 
   const activeRun =
-    activeRunNo === 1
-      ? caseData?.runs?.[0]
-      : caseData?.runs?.[1] || caseData?.runs?.[0];
+    caseData?.runs?.find((r) => r.run_no === activeRunNo) ||
+    caseData?.runs?.[activeRunNo - 1] ||
+    caseData?.runs?.[caseData?.runs?.length - 1] ||
+    caseData?.runs?.[0] ||
+    null;
 
   const navTabs = [
     { id: "overview", label: "Exposure Matrix", icon: LayoutDashboard },
@@ -125,25 +135,22 @@ export default function App() {
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-md whitespace-nowrap transition relative ${
-                      isActive
+                    className={`flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-md whitespace-nowrap transition relative ${isActive
                         ? "text-white bg-white/[0.08]"
                         : "text-slate-400 hover:text-slate-200 hover:bg-white/[0.03]"
-                    }`}
+                      }`}
                   >
                     <Icon
-                      className={`w-3.5 h-3.5 ${
-                        isActive ? "text-indigo-400" : "text-slate-500"
-                      }`}
+                      className={`w-3.5 h-3.5 ${isActive ? "text-indigo-400" : "text-slate-500"
+                        }`}
                     />
                     <span>{tab.label}</span>
                     {tab.badge && (
                       <span
-                        className={`text-[9px] font-mono px-1.5 py-0.2 rounded ${
-                          isActive
+                        className={`text-[9px] font-mono px-1.5 py-0.2 rounded ${isActive
                             ? "bg-indigo-500/20 text-indigo-300 border border-indigo-500/30"
                             : "bg-white/[0.04] text-slate-500"
-                        }`}
+                          }`}
                       >
                         {tab.badge}
                       </span>
@@ -162,6 +169,8 @@ export default function App() {
             {activeTab === "overview" && (
               <CalibratedExposureView
                 matrixData={caseData?.exposure_matrix}
+                activeRun={activeRun}
+                caseData={caseData}
                 onOpenDoc={setInspectedDocId}
                 onOpenBriefing={() => setBriefingOpen(true)}
               />
@@ -174,6 +183,7 @@ export default function App() {
             {activeTab === "courtroom" && (
               <AdversarialDebateView
                 activeRun={activeRun}
+                caseData={caseData}
                 onOpenDoc={setInspectedDocId}
               />
             )}

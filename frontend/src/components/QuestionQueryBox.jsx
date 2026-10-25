@@ -12,7 +12,7 @@ export default function QuestionQueryBox({
 }) {
   const [question, setQuestion] = useState(
     initialQuestion ||
-      "As of 25 January 2027, how exposed are Midgard and Tolan to the end of the Orvan corridor agreement? Give a low and high range for wheat and maize imports."
+    "As of 25 January 2027, how exposed are Midgard and Tolan to the end of the Orvan corridor agreement? Give a low and high range for wheat and maize imports."
   );
   const [dateVal, setDateVal] = useState(asOfDate || "2027-01-25");
 

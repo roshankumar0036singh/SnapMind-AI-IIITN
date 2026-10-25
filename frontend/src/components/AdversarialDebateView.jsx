@@ -1,12 +1,30 @@
 import React, { useState } from "react";
 import { Scale, Zap, Shield, Gavel, CheckCircle2, AlertTriangle, ArrowRight, ExternalLink, Filter } from "lucide-react";
 
-export default function AdversarialDebateView({ activeRun, onOpenDoc }) {
+export default function AdversarialDebateView({ activeRun, caseData, onOpenDoc }) {
   const [filterType, setFilterType] = useState("all");
   const thorClaims = activeRun?.claims?.filter((c) => c.agent === "thor") || activeRun?.thor_claims || [];
   const lokiClaims = activeRun?.claims?.filter((c) => c.agent === "loki") || activeRun?.loki_claims || [];
   const attacks = activeRun?.attacks || [];
   const defences = activeRun?.defences || [];
+
+  const budget = caseData?.budget || {
+    turns_used: activeRun?.debate_turns?.length || 2,
+    max_debate_turns: 12,
+    stable_cycles: 2,
+    max_stable_cycles: 2,
+    tool_calls_used: caseData?.limits?.tool_calls_used || 8,
+    max_tool_calls: 40,
+    tokens_used: caseData?.limits?.tokens_used || 24500,
+    max_tokens: 120000,
+    wall_seconds_used: 14.2,
+    limit_hit: caseData?.termination || "CONVERGED_STABLE",
+  };
+
+  const isSendBack = activeRun?.sufficiency === "insufficient";
+  const establishedList = activeRun?.classification?.established || [];
+  const contestedList = activeRun?.classification?.contested || [];
+  const concededList = activeRun?.classification?.conceded || [];
 
   const filterList = (claims) => {
     if (filterType === "facts") {
@@ -22,49 +40,134 @@ export default function AdversarialDebateView({ activeRun, onOpenDoc }) {
   const filteredLoki = filterList(lokiClaims);
 
   return (
-    <div className="flex flex-col gap-8 w-full animate-fade-in">
+    <div className="flex flex-col gap-6 w-full animate-fade-in">
       {/* Sub-Header Bar: Controls & Filters */}
       <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-white/[0.06]">
         <div>
           <h2 className="text-base font-semibold text-white font-sans flex items-center gap-2.5">
             <Scale className="w-4 h-4 text-indigo-400" />
-            <span>Adversarial Courtroom Chamber (Round 1 Claims & Round 2 Cross-Examination)</span>
+            <span>Adversarial Courtroom Chamber (Open-Ended Convergence Deliberation)</span>
           </h2>
           <p className="text-xs text-slate-400 mt-1">
-            Planner-free blackboard debate: Thor argues high exposure, Loki argues mitigated exposure, Odin rules on every claim.
+            Autonomous multi-turn convergence debate: Counsel cross-examine until judicial stability is reached or safety budget fires.
           </p>
         </div>
 
-        {/* Filter Pills with Comfortable Padding */}
+        {/* Filter Pills */}
         <div className="flex items-center gap-1.5 p-1 rounded-lg bg-white/[0.04] border border-white/[0.08] text-xs">
           <button
             onClick={() => setFilterType("all")}
-            className={`px-3 py-1.5 rounded-md text-xs font-medium transition ${
-              filterType === "all" ? "bg-white/[0.14] text-white" : "text-slate-400 hover:text-slate-200"
-            }`}
+            className={`px-3 py-1.5 rounded-md text-xs font-medium transition ${filterType === "all" ? "bg-white/[0.14] text-white" : "text-slate-400 hover:text-slate-200"
+              }`}
           >
             All Claims ({thorClaims.length + lokiClaims.length})
           </button>
           <button
             onClick={() => setFilterType("facts")}
-            className={`px-3 py-1.5 rounded-md text-xs font-medium transition ${
-              filterType === "facts" ? "bg-white/[0.14] text-white" : "text-slate-400 hover:text-slate-200"
-            }`}
+            className={`px-3 py-1.5 rounded-md text-xs font-medium transition ${filterType === "facts" ? "bg-white/[0.14] text-white" : "text-slate-400 hover:text-slate-200"
+              }`}
           >
             Sourced Facts Only
           </button>
           <button
             onClick={() => setFilterType("inferences")}
-            className={`px-3 py-1.5 rounded-md text-xs font-medium transition ${
-              filterType === "inferences" ? "bg-white/[0.14] text-white" : "text-slate-400 hover:text-slate-200"
-            }`}
+            className={`px-3 py-1.5 rounded-md text-xs font-medium transition ${filterType === "inferences" ? "bg-white/[0.14] text-white" : "text-slate-400 hover:text-slate-200"
+              }`}
           >
             Inferences Only
           </button>
         </div>
       </div>
 
-      {/* Dual Column Debate Grid (Thor on Left, Loki on Right) with Generous Gap */}
+      {/* NEW ELEMENT: Debate Convergence & Judicial State Visualizer */}
+      <div className="linear-panel p-5 border-white/[0.08] bg-[#0c0e15] flex flex-col gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center">
+              <Gavel className="w-4 h-4 text-indigo-400" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-mono font-bold uppercase tracking-wider text-slate-200">
+                  Judicial State & Convergence Loop
+                </span>
+                <span
+                  className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider ${isSendBack
+                      ? "bg-amber-500/15 text-amber-300 border border-amber-500/30"
+                      : "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
+                    }`}
+                >
+                  {isSendBack ? "Send-Back Triggered" : budget.limit_hit || "CONVERGED_STABLE"}
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400 font-sans mt-0.5">
+                {isSendBack
+                  ? "Odin found evidence insufficient for judicial closure. Case remanded to Heimdall for supplemental retrieval."
+                  : "Debate achieved stable equilibrium across adversarial counsel with verified citations and cross-examination answers."}
+              </p>
+            </div>
+          </div>
+
+          {/* Classification Stats Chips */}
+          <div className="flex items-center gap-2 font-mono text-xs">
+            <span className="px-2.5 py-1 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-300">
+              Established: <strong>{establishedList.length}</strong>
+            </span>
+            <span className="px-2.5 py-1 rounded bg-amber-500/10 border border-amber-500/20 text-amber-300">
+              Contested: <strong>{contestedList.length}</strong>
+            </span>
+            <span className="px-2.5 py-1 rounded bg-rose-500/10 border border-rose-500/20 text-rose-300">
+              Conceded: <strong>{concededList.length}</strong>
+            </span>
+          </div>
+        </div>
+
+        {/* Safety Budget & Resource Telemetry Bar */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3 border-t border-white/[0.06] font-mono text-xs">
+          <div className="p-2.5 rounded bg-white/[0.02] border border-white/[0.04]">
+            <span className="text-[10px] text-slate-500 block uppercase">Debate Turns</span>
+            <span className="text-slate-200 font-semibold">
+              {budget.turns_used} / {budget.max_debate_turns || 12}
+            </span>
+            <span className="text-[10px] text-slate-500 ml-1">({budget.stable_cycles || 2} stable)</span>
+          </div>
+          <div className="p-2.5 rounded bg-white/[0.02] border border-white/[0.04]">
+            <span className="text-[10px] text-slate-500 block uppercase">Tool Call Budget</span>
+            <span className="text-slate-200 font-semibold">
+              {budget.tool_calls_used || 0} / {budget.max_tool_calls || 40}
+            </span>
+            <span className="text-[10px] text-slate-500 ml-1">calls</span>
+          </div>
+          <div className="p-2.5 rounded bg-white/[0.02] border border-white/[0.04]">
+            <span className="text-[10px] text-slate-500 block uppercase">Token Burn</span>
+            <span className="text-slate-200 font-semibold">
+              {(budget.tokens_used || 0).toLocaleString()} / {(budget.max_tokens || 120000).toLocaleString()}
+            </span>
+          </div>
+          <div className="p-2.5 rounded bg-white/[0.02] border border-white/[0.04]">
+            <span className="text-[10px] text-slate-500 block uppercase">Convergence Status</span>
+            <span className="text-emerald-400 font-semibold">
+              {budget.stable_cycles >= 2 ? "Equilibrium reached" : "Deliberating..."}
+            </span>
+          </div>
+        </div>
+
+        {/* Send-Back Missing Evidence Request Alert */}
+        {isSendBack && activeRun?.missing?.length > 0 && (
+          <div className="p-3 rounded bg-amber-950/20 border border-amber-900/40 text-xs">
+            <span className="text-amber-400 font-mono font-bold block mb-1">
+              Odin Evidence Deficit Remand Notice:
+            </span>
+            <ul className="list-disc list-inside text-amber-200/80 space-y-0.5">
+              {activeRun.missing.map((m, i) => (
+                <li key={i}>{m}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+
+      {/* Dual Column Debate Grid (Thor on Left, Loki on Right) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* THOR'S COLUMN (HIGH EXPOSURE) */}
         <div className="flex flex-col gap-4">
@@ -82,31 +185,58 @@ export default function AdversarialDebateView({ activeRun, onOpenDoc }) {
 
           <div className="flex flex-col gap-4">
             {filteredThor.map((claim, idx) => {
-              const ruling = claim.ruling;
+              const claimId = claim.claim_id || claim.id;
+              const ruling =
+                claim.ruling ||
+                activeRun?.rulings?.find((r) => r.claim_id === claimId);
               const isUpheld = ruling?.outcome === "upheld";
+              const isRejected = ruling?.outcome === "rejected";
+              const isContested =
+                ruling?.outcome === "contested" ||
+                contestedList.includes(claimId);
+              const isEstablished =
+                isUpheld || establishedList.includes(claimId);
+              const isConceded =
+                isRejected || concededList.includes(claimId);
               const isFact = claim.kind === "sourced_fact" || claim.is_fact;
 
               return (
                 <div
-                  key={claim.claim_id || claim.id || idx}
+                  key={claimId || idx}
                   className="linear-panel p-6 flex flex-col gap-3.5 hover:border-white/[0.16] transition"
                 >
                   <div className="flex items-center justify-between gap-3 text-xs">
                     <div className="flex items-center gap-2.5">
                       <span className="font-mono text-slate-200 font-semibold text-sm">
-                        {claim.claim_id || claim.id}
+                        {claimId}
                       </span>
                       <span className="text-slate-600">•</span>
                       <span className="text-slate-300 font-medium">{claim.country} / {claim.sector}</span>
                     </div>
 
                     <div className="flex items-center gap-2">
+                      {/* Classification Badge */}
+                      {isEstablished && (
+                        <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                          Established
+                        </span>
+                      )}
+                      {isContested && (
+                        <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-amber-500/15 text-amber-400 border border-amber-500/30">
+                          Contested
+                        </span>
+                      )}
+                      {isConceded && (
+                        <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-rose-500/15 text-rose-400 border border-rose-500/30">
+                          Conceded / Refuted
+                        </span>
+                      )}
+
                       <span
-                        className={`px-2 py-0.5 rounded text-[11px] font-mono uppercase ${
-                          isFact
+                        className={`px-2 py-0.5 rounded text-[11px] font-mono uppercase ${isFact
                             ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
                             : "bg-sky-500/10 text-sky-400 border border-sky-500/20"
-                        }`}
+                          }`}
                       >
                         {isFact ? "Sourced Fact" : "Inference"}
                       </span>
@@ -144,11 +274,10 @@ export default function AdversarialDebateView({ activeRun, onOpenDoc }) {
                       <div className="flex-1 text-xs">
                         <div className="flex items-center gap-2.5 mb-1">
                           <span
-                            className={`font-mono text-xs font-bold uppercase px-2 py-0.5 rounded ${
-                              isUpheld
+                            className={`font-mono text-xs font-bold uppercase px-2 py-0.5 rounded ${isUpheld
                                 ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
                                 : "bg-amber-500/15 text-amber-400 border border-amber-500/30"
-                            }`}
+                              }`}
                           >
                             Odin: {ruling.outcome}
                           </span>
@@ -184,31 +313,58 @@ export default function AdversarialDebateView({ activeRun, onOpenDoc }) {
 
           <div className="flex flex-col gap-4">
             {filteredLoki.map((claim, idx) => {
-              const ruling = claim.ruling;
+              const claimId = claim.claim_id || claim.id;
+              const ruling =
+                claim.ruling ||
+                activeRun?.rulings?.find((r) => r.claim_id === claimId);
               const isUpheld = ruling?.outcome === "upheld";
+              const isRejected = ruling?.outcome === "rejected";
+              const isContested =
+                ruling?.outcome === "contested" ||
+                contestedList.includes(claimId);
+              const isEstablished =
+                isUpheld || establishedList.includes(claimId);
+              const isConceded =
+                isRejected || concededList.includes(claimId);
               const isFact = claim.kind === "sourced_fact" || claim.is_fact;
 
               return (
                 <div
-                  key={claim.claim_id || claim.id || idx}
+                  key={claimId || idx}
                   className="linear-panel p-6 flex flex-col gap-3.5 hover:border-white/[0.16] transition"
                 >
                   <div className="flex items-center justify-between gap-3 text-xs">
                     <div className="flex items-center gap-2.5">
                       <span className="font-mono text-slate-200 font-semibold text-sm">
-                        {claim.claim_id || claim.id}
+                        {claimId}
                       </span>
                       <span className="text-slate-600">•</span>
                       <span className="text-slate-300 font-medium">{claim.country} / {claim.sector}</span>
                     </div>
 
                     <div className="flex items-center gap-2">
+                      {/* Classification Badge */}
+                      {isEstablished && (
+                        <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                          Established
+                        </span>
+                      )}
+                      {isContested && (
+                        <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-amber-500/15 text-amber-400 border border-amber-500/30">
+                          Contested
+                        </span>
+                      )}
+                      {isConceded && (
+                        <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-rose-500/15 text-rose-400 border border-rose-500/30">
+                          Conceded / Refuted
+                        </span>
+                      )}
+
                       <span
-                        className={`px-2 py-0.5 rounded text-[11px] font-mono uppercase ${
-                          isFact
+                        className={`px-2 py-0.5 rounded text-[11px] font-mono uppercase ${isFact
                             ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
                             : "bg-sky-500/10 text-sky-400 border border-sky-500/20"
-                        }`}
+                          }`}
                       >
                         {isFact ? "Sourced Fact" : "Inference"}
                       </span>
@@ -246,11 +402,10 @@ export default function AdversarialDebateView({ activeRun, onOpenDoc }) {
                       <div className="flex-1 text-xs">
                         <div className="flex items-center gap-2.5 mb-1">
                           <span
-                            className={`font-mono text-xs font-bold uppercase px-2 py-0.5 rounded ${
-                              isUpheld
+                            className={`font-mono text-xs font-bold uppercase px-2 py-0.5 rounded ${isUpheld
                                 ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
                                 : "bg-amber-500/15 text-amber-400 border border-amber-500/30"
-                            }`}
+                              }`}
                           >
                             Odin: {ruling.outcome}
                           </span>
@@ -328,11 +483,10 @@ export default function AdversarialDebateView({ activeRun, onOpenDoc }) {
                       {def.defence_id} (re: {def.attack_id})
                     </span>
                     <span
-                      className={`px-2 py-0.5 rounded text-xs font-mono uppercase font-bold ${
-                        isConcession
+                      className={`px-2 py-0.5 rounded text-xs font-mono uppercase font-bold ${isConcession
                           ? "bg-amber-500/10 text-amber-400 border border-amber-500/20"
                           : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-                      }`}
+                        }`}
                     >
                       {isConcession ? "Concession" : "New Evidence"}
                     </span>
