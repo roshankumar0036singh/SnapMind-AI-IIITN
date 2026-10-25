@@ -238,7 +238,17 @@ def search_docs(
         bm25_q = bm25_q.or_(f"content.ilike.%{clean_query}%,title.ilike.%{clean_query}%")
 
     bm25_q = bm25_q.limit(top_k * 4)
-    raw_results = bm25_q.execute().data or []
+    raw_results = []
+    for attempt in range(3):
+        try:
+            raw_results = bm25_q.execute().data or []
+            break
+        except Exception as e:
+            if attempt == 2:
+                raw_results = []
+            else:
+                import time
+                time.sleep(0.5 * (attempt + 1))
 
     # --- Post-filter: event scope ---
     def _passes_event_filter(doc: Dict[str, Any]) -> bool:

@@ -345,9 +345,10 @@ def run_heimdall(
     docs: List[Dict[str, Any]] = []
     try:
         docs = search_docs(
-            query=question[:120],
+            query=question[:200],
             as_of=as_of,
-            top_k=6,
+            event_id=event_id,
+            top_k=8,
         )
         if docs:
             initial_docs_context = "\n\nRETRIEVED CORPUS DOCUMENTS (evidence candidates):\n"
