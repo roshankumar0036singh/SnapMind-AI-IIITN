@@ -35,11 +35,11 @@ class BaseAgent(ABC):
     Provides standard Gemini generation, memory access, and tool execution.
     """
 
-    DEFAULT_MODEL = "gemini-2.5-flash"
+    DEFAULT_MODEL = "gemini-3.5-flash-lite"
 
     def __init__(self, agent_id: str):
         self.agent_id = agent_id.lower().strip()
-        self.model_name = os.getenv("GEMINI_MODEL", self.DEFAULT_MODEL)
+        self.model_name = settings.GEMINI_MODEL or self.DEFAULT_MODEL
         self.tools: AgentToolRegistry = get_tool_registry()
 
         # Initialize Google GenAI Client
@@ -74,16 +74,25 @@ class BaseAgent(ABC):
     ) -> T:
         """
         Calls Google Gemini API with guaranteed Pydantic structured output schema.
-        Includes automatic retry with backoff and model fallback on 503/429 errors.
+        Primary: gemini-3.5-flash-lite
+        Fallback: gemini-3.6-flash (then gemini-2.5-flash)
+        Includes automatic retry with exponential backoff on 503/429 errors.
         """
         import time
         from google.genai.errors import ServerError, ClientError
 
-        models_to_try = [self.model_name, "gemini-2.5-flash", "gemini-1.5-flash"]
+        # Model hierarchy: User defined -> gemini-3.5-flash-lite -> gemini-3.6-flash -> gemini-2.5-flash
+        models_to_try = [
+            self.model_name,
+            "gemini-3.5-flash-lite",
+            settings.GEMINI_FALLBACK_MODEL or "gemini-3.6-flash",
+            "gemini-3.6-flash",
+            "gemini-2.5-flash",
+        ]
         # Deduplicate while preserving order
         unique_models = []
         for m in models_to_try:
-            if m not in unique_models:
+            if m and m not in unique_models:
                 unique_models.append(m)
 
         config = {
