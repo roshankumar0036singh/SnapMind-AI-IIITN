@@ -16,6 +16,8 @@ class Settings:
     # LLM & Embeddings & Reranker
     XAI_API_KEY: str = os.getenv("XAI_API_KEY", "")
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
+    GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite")
+    GEMINI_FALLBACK_MODEL: str = os.getenv("GEMINI_FALLBACK_MODEL", "gemini-3.6-flash")
     COHERE_API_KEY: str = os.getenv("COHERE_API_KEY", "")
     GROQ_API_KEY: str = os.getenv("GROQ_API_KEY", "")  # Heimdall LLM provider
 

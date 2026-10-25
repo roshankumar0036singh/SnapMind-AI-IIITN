@@ -1,0 +1,2 @@
+{"timestamp": "2026-10-25T09:22:11.612937+00:00", "agent_id": "thor", "event_type": "memory_written", "memory_id": "thor_mem_1", "content": "Always check Table 4 for baseline drops"}
+{"timestamp": "2026-10-25T09:22:11.613801+00:00", "agent_id": "thor", "event_type": "memory_read", "scope_queried": null, "count": 1}

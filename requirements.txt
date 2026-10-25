@@ -13,7 +13,6 @@ psycopg2-binary>=2.9.10
 openai>=1.55.0          # Used as client for Grok (xAI API) AND Groq (Heimdall LLM)
 instructor>=1.7.0       # Guaranteed strict Pydantic schemas for claims & rulings
 
-
 # Embeddings & Reranking
 google-genai>=0.1.1     # Gemini text-embedding-004
 cohere>=5.13.0          # Cohere Rerank API (rerank-v3.5)
