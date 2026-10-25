@@ -219,10 +219,11 @@ def search_docs(
             "exposed", "about", "before", "after", "between", "under", "over", "does", "did",
             "many", "much", "more", "most", "some", "such", "than", "then", "into", "onto",
             "also", "only", "other", "their", "there", "they", "them", "then", "your", "ours",
-            "january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"
+            "january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december",
+            "2024", "2025", "2026", "2027", "2028", "2029", "2030"
         }
         tokens = re.findall(r'[A-Za-z0-9_-]+', clean_query)
-        keywords = [t for t in tokens if len(t) > 3 and t.lower() not in STOPWORDS]
+        keywords = [t for t in tokens if len(t) > 3 and t.lower() not in STOPWORDS and not t.isdigit()]
         caps = [t for t in keywords if t[0].isupper() or (t.startswith("E") and any(c.isdigit() for c in t))]
         others = [t for t in keywords if t not in caps]
         search_terms = (caps + others)[:6]
@@ -237,15 +238,45 @@ def search_docs(
     else:
         bm25_q = bm25_q.or_(f"content.ilike.%{clean_query}%,title.ilike.%{clean_query}%")
 
-    bm25_q = bm25_q.limit(top_k * 4)
+    # Order by publication date descending so recent disruption news takes priority over static atlas docs
+    bm25_q = bm25_q.order("pub_date", desc=True).limit(top_k * 4)
     raw_results = []
+
+    # If an event_id is specified, fetch event-specific candidate documents directly
+    if canonical_filters.get("event_id"):
+        try:
+            ev_query = db.table("runemark_documents").select(
+                "doc_id, title, content, country, sector, event_id, pub_date, "
+                "source_type, reliability_tier, is_retracted, is_corrected, "
+                "is_damaged, damage_type, is_duplicate, duplicate_of, is_injection_attempt, "
+                "retracted_by, corrected_by"
+            ).eq("event_id", canonical_filters["event_id"].upper())
+            if effective_as_of:
+                ev_query = ev_query.lte("pub_date", str(effective_as_of))
+            if canonical_filters["exclude_retracted"]:
+                ev_query = ev_query.eq("is_retracted", False)
+            if canonical_filters["exclude_damaged"]:
+                ev_query = ev_query.eq("is_damaged", False)
+            if canonical_filters["exclude_duplicates"]:
+                ev_query = ev_query.eq("is_duplicate", False)
+            ev_query = ev_query.eq("is_injection_attempt", False)
+            ev_res = ev_query.order("pub_date", desc=True).limit(top_k * 2).execute().data or []
+            raw_results.extend(ev_res)
+        except Exception:
+            pass
+
     for attempt in range(3):
         try:
-            raw_results = bm25_q.execute().data or []
+            bm_res = bm25_q.execute().data or []
+            existing_ids = {d["doc_id"] for d in raw_results if "doc_id" in d}
+            for d in bm_res:
+                if d.get("doc_id") not in existing_ids:
+                    raw_results.append(d)
+                    existing_ids.add(d.get("doc_id"))
             break
         except Exception as e:
             if attempt == 2:
-                raw_results = []
+                pass
             else:
                 import time
                 time.sleep(0.5 * (attempt + 1))
