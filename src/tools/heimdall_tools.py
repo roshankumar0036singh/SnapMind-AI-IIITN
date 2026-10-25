@@ -789,3 +789,38 @@ def heimdall_write_memory(
         run_no=run_no,
         case_id=case_id,
     )
+
+
+# ---------------------------------------------------------------------------
+# Knowledge Graph Tool (Graph RAG)
+# ---------------------------------------------------------------------------
+
+def search_knowledge_graph(
+    country: Optional[str] = None,
+    sector: Optional[str] = None,
+    as_of: Optional[date] = None,
+    max_depth: int = 2,
+) -> Dict[str, Any]:
+    """
+    Query the knowledge graph for topological scope, transit bottlenecks,
+    and verified disruption events with strict as-of date gating.
+    """
+    _check_budget()
+    from src.retrieval.graph_retriever import get_graph_retriever
+    retriever = get_graph_retriever()
+    subgraph = retriever.retrieve_local_subgraph(
+        country=country or "Midgard",
+        sector=sector,
+        as_of_date=as_of,
+        max_depth=max_depth,
+    )
+    paths = retriever.retrieve_causal_paths(
+        target_country=country or "Midgard",
+        as_of_date=as_of,
+    )
+    return {
+        "nodes": [n.model_dump(mode="json") for n in subgraph.nodes],
+        "triplets": [t.model_dump(mode="json") for t in subgraph.triplets],
+        "paths": [p.model_dump(mode="json") for p in paths],
+        "citations": subgraph.citations,
+    }

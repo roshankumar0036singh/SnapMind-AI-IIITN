@@ -53,6 +53,7 @@ from src.tools.heimdall_tools import (
     record_event,
     reset_tool_budget,
     search_docs,
+    search_knowledge_graph,
     verify_citation,
 )
 
@@ -361,6 +362,20 @@ def run_heimdall(
     except Exception as e:
         _audit("initial_search_error", {"error": str(e)})
 
+    # Graph RAG: Knowledge Graph topology & geopolitical scope
+    graph_context = ""
+    try:
+        from src.retrieval.graph_retriever import get_graph_retriever
+        graph_context = get_graph_retriever().format_graph_context_for_agent(
+            agent_role="heimdall",
+            country="Midgard",
+            as_of_date=as_of,
+        )
+        if graph_context:
+            _audit("graph_rag_retrieved", {"role": "heimdall"})
+    except Exception as e:
+        _audit("graph_rag_error", {"error": str(e)})
+
     # Compact, instruction-first user prompt (keeps token count low)
     doc_count = len(docs) if docs else 0
     user_prompt = (
@@ -373,6 +388,8 @@ def run_heimdall(
         user_prompt += memory_context
     if send_back_context:
         user_prompt += send_back_context
+    if graph_context:
+        user_prompt += f"\n\n{graph_context}\n"
     if initial_docs_context:
         user_prompt += initial_docs_context
     else:
@@ -528,9 +545,18 @@ def run_heimdall(
     # If LLM put a doc_id (like ORV-0002) in event_id, normalize it
     if output.scope.event_id and (output.scope.event_id.startswith("ORV-") or output.scope.event_id.startswith("DOC-")):
         output.scope.event_id = detected_event_id
-    if not output.scope.event_id and detected_event_id:
-        output.scope.event_id = detected_event_id
     output.event_id = output.scope.event_id
+
+    # Graph RAG scope enrichment: ensure all graph-modeled nations in question are included in scope
+    try:
+        from src.graph.store import get_graph_store
+        g_store = get_graph_store()
+        all_graph_nations = [n.name for n in g_store.nodes_data.values() if n.entity_type.value == "nation"]
+        for nation in all_graph_nations:
+            if nation.lower() in question.lower() and nation not in output.scope.countries:
+                output.scope.countries.append(nation)
+    except Exception:
+        pass
 
     # 4b. Verify citations referenced by LLM
     for ref in (output.verification.supporting_refs or []):

@@ -59,8 +59,25 @@ from src.schemas.case_file import (
     AuditEvent,
     HeimdallOutput,
 )
+from src.schemas.graph import (
+    EntityType,
+    RelationType,
+    GraphNode,
+    GraphEdge,
+    GraphTriplet,
+    GraphPath,
+    SubgraphResult,
+)
 
 __all__ = [
+    # Graph
+    "EntityType",
+    "RelationType",
+    "GraphNode",
+    "GraphEdge",
+    "GraphTriplet",
+    "GraphPath",
+    "SubgraphResult",
     # Ingest
     "DocumentMetadata",
     "DocumentDamageReport",
