@@ -36,17 +36,44 @@ class AgentMemoryStore:
     ) -> List[MemoryRecord]:
         """
         Retrieves active memory records strictly filtered by agent_id.
+        Uses admin client to bypass RLS.
         """
         try:
             res = (
-                self.client.table(self.TABLE_NAME)
+                self.admin.table(self.TABLE_NAME)
                 .select("*")
                 .eq("agent_id", agent_id.lower())
                 .eq("status", status)
                 .execute()
             )
             rows = res.data or []
-            return [MemoryRecord(**row) for row in rows]
+            records = []
+            for row in rows:
+                scope_val = row.get("scope") or "global"
+                scope_key = scope_val
+                sub_val = None
+                if isinstance(scope_val, str) and ":" in scope_val:
+                    scope_key, sub_val = scope_val.split(":", 1)
+                elif isinstance(scope_val, str) and scope_val.startswith("{"):
+                    import json
+                    try:
+                        scope_dict = json.loads(scope_val)
+                        sub_val = scope_dict.get("event_id") or scope_dict.get("country")
+                        scope_key = "event" if "event_id" in scope_dict else "global"
+                    except Exception:
+                        pass
+                elif isinstance(scope_val, dict):
+                    sub_val = scope_val.get("event_id") or scope_val.get("country")
+                    scope_key = "event" if "event_id" in scope_val else "global"
+
+                row_copy = dict(row)
+                row_copy["scope"] = scope_key
+                row_copy["scope_value"] = sub_val
+                try:
+                    records.append(MemoryRecord(**row_copy))
+                except Exception:
+                    pass
+            return records
         except Exception as e:
             print(f"Warning: Failed to fetch memories from Supabase for {agent_id} ({e})")
             return []
@@ -55,12 +82,16 @@ class AgentMemoryStore:
         """
         Upserts a private memory record into Supabase.
         """
+        scope_str = record.scope.value if hasattr(record.scope, "value") else str(record.scope)
+        if record.scope_value:
+            scope_str = f"{scope_str}:{record.scope_value}"
+
         row = {
             "id": record.id,
             "agent_id": record.agent_id.lower(),
             "memory_type": record.memory_type.value if hasattr(record.memory_type, "value") else str(record.memory_type),
             "content": record.content,
-            "scope": record.scope.value if hasattr(record.scope, "value") else str(record.scope),
+            "scope": scope_str,
             "basis_refs": record.basis_refs,
             "confidence": record.confidence,
             "created_run": record.created_run,

@@ -1,5 +1,5 @@
 import uuid
-from typing import List, Optional
+from typing import List, Optional, Any
 
 from src.memory.store import AgentMemoryStore
 from src.schemas.memory import MemoryRecord, MemoryType, MemoryScope, MemoryQuery
@@ -89,6 +89,55 @@ class MemoryManager:
 
         self.store.save_memory(record)
         return record
+
+    def write_memory(
+        self,
+        agent_id: str,
+        memory_type: Any = "search_strategy",
+        content: str = "",
+        scope: Any = MemoryScope.GLOBAL,
+        scope_value: Optional[str] = None,
+        basis_refs: Optional[List[str]] = None,
+        confidence: float = 1.0,
+        run_no: int = 1,
+    ) -> MemoryRecord:
+        """
+        Alias for record_lesson accepting string or enum inputs from AgentToolRegistry.
+        """
+        if isinstance(memory_type, str):
+            mem_str = memory_type.lower()
+            if mem_str in ("strategy", "search_strategy"):
+                memory_type = MemoryType.SEARCH_STRATEGY
+            elif mem_str in ("source", "source_lesson"):
+                memory_type = MemoryType.SOURCE_LESSON
+            elif mem_str in ("calculation", "calculation_method"):
+                memory_type = MemoryType.CALCULATION_METHOD
+            elif mem_str in ("verification", "verification_rule"):
+                memory_type = MemoryType.VERIFICATION_RULE
+            elif mem_str in ("ruling", "ruling_precedent"):
+                memory_type = MemoryType.RULING_PRECEDENT
+            else:
+                try:
+                    memory_type = MemoryType(mem_str)
+                except Exception:
+                    memory_type = MemoryType.SEARCH_STRATEGY
+
+        if isinstance(scope, str):
+            try:
+                scope = MemoryScope(scope.lower())
+            except Exception:
+                scope = MemoryScope.GLOBAL
+
+        return self.record_lesson(
+            agent_id=agent_id,
+            memory_type=memory_type,
+            content=content,
+            scope=scope,
+            scope_value=scope_value,
+            basis_refs=basis_refs,
+            confidence=confidence,
+            run_no=run_no,
+        )
 
 
 _memory_manager: Optional[MemoryManager] = None
