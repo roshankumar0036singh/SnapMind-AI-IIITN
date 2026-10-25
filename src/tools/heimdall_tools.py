@@ -257,7 +257,6 @@ def search_docs(
 
     # Prioritize event-specific documents over background profiles
     filtered.sort(key=lambda d: 0 if (d.get("event_id") or "NONE").upper() not in ("NONE", "") else 1)
-
     # --- Scan retrieved content for injection patterns ---
     results = []
     for doc in filtered[:top_k]:
