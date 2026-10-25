@@ -2,7 +2,7 @@ import os
 from datetime import date
 from typing import List, Optional, Dict, Any
 
-from src.supabase_client import get_supabase_client
+from src.supabase_client import get_supabase_client, get_supabase_admin
 from src.llm.embeddings import get_embedding_client
 from src.schemas.retrieval import SearchQuery, SearchResultItem, SearchResponse
 
@@ -21,7 +21,7 @@ class HybridSearcher:
     @property
     def client(self):
         if self._client is None:
-            self._client = get_supabase_client()
+            self._client = get_supabase_admin()
         return self._client
 
     def search(self, query: SearchQuery) -> List[SearchResultItem]:

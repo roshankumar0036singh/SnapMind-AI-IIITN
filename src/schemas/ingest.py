@@ -54,7 +54,7 @@ class ParagraphChunk(BaseModel):
     text: str = Field(..., min_length=1, description="Paragraph body text")
     metadata: DocumentMetadata
     damage_report: DocumentDamageReport = Field(default_factory=DocumentDamageReport)
-    embedding: Optional[List[float]] = Field(default=None, description="768-dim vector from Gemini text-embedding-004")
+    embedding: Optional[List[float]] = Field(default=None, description="768-dim vector from Gemini gemini-embedding-2")
 
 
 class IngestReport(BaseModel):
