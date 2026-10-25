@@ -1,0 +1,31 @@
+# Core API & Server
+fastapi>=0.115.0
+uvicorn[standard]>=0.32.0
+python-dotenv>=1.0.1
+pydantic>=2.10.0
+
+# Database & Supabase
+supabase>=2.10.0
+postgrest>=0.19.0
+psycopg2-binary>=2.9.10
+
+# LLM Reasoning & Structured Outputs
+openai>=1.55.0          # Used as client for Grok (xAI API)
+instructor>=1.7.0       # Guaranteed strict Pydantic schemas for claims & rulings
+
+# Embeddings & Reranking
+google-genai>=0.1.1     # Gemini text-embedding-004
+cohere>=5.13.0          # Cohere Rerank API (rerank-v3.5)
+
+# Document Parsing & Damage Detection (Section 8)
+pymupdf>=1.25.0         # Fast PDF text & structure extraction
+python-docx>=1.1.2      # DOCX parser
+charset-normalizer>=3.4.0 # Encoding detection (UTF-8, Latin-1, Windows-1252)
+
+# Trade Data Processing (Section 9)
+pandas>=2.2.3           # Tabular trade table validation & baseline percentage math
+
+# Testing & Dev
+pytest>=8.3.0
+pytest-asyncio>=0.24.0
+httpx>=0.28.0
