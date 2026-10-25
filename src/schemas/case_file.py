@@ -1,18 +1,98 @@
 """
 src/schemas/case_file.py
 ========================
-Pydantic v2 schemas for the shared Case File blackboard.
+Pydantic v2 schemas for the shared Case File blackboard and Heimdall gatekeeper.
 Every agent reads and writes through these models — validated before persistence.
 """
 
 from __future__ import annotations
-from datetime import date
-from typing import Any, List, Optional
+from datetime import date, datetime
+from enum import Enum
+from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field, field_validator
+
+from src.schemas.ingest import IngestReport
+from src.schemas.claims import Claim, Attack, Defence
+from src.schemas.rulings import Ruling, ClassificationSummary, CountrySectorRange
 
 
 # ---------------------------------------------------------------------------
-# Scope
+# Core Case Blackboard Models (Shared by all agents)
+# ---------------------------------------------------------------------------
+
+class CaseStatus(str, Enum):
+    OPEN = "open"
+    REJECTED = "rejected"
+    CLOSED = "closed"
+    CLOSED_INCOMPLETE = "closed_incomplete"
+
+
+class EventScope(BaseModel):
+    """
+    Scope determined by Heimdall from user question.
+    """
+    event_id: str = Field(..., description="e.g. 'E5'")
+    event_name: str
+    target_countries: List[str] = Field(default_factory=list)
+    target_sectors: List[str] = Field(default_factory=list)
+    as_of_date: date
+
+
+class VerificationVerdict(BaseModel):
+    """
+    Event verification result from Heimdall (Acceptance Check 1).
+    """
+    verdict: str = Field(..., description="'real', 'rumour', or 'unverifiable'")
+    confidence: float = Field(default=1.0, ge=0.0, le=1.0)
+    reasons: List[str] = Field(default_factory=list)
+    supporting_docs: List[str] = Field(default_factory=list)
+    retractions: List[str] = Field(default_factory=list)
+    message_to_user: str
+
+
+class RunRecord(BaseModel):
+    """
+    Snapshot of an individual trial run (Run 1 or Run 2).
+    """
+    run_no: int = Field(default=1, ge=1)
+    evidence_index: List[str] = Field(default_factory=list)
+    side_status: Dict[str, str] = Field(default_factory=lambda: {"thor": "active", "loki": "active"})
+    claims: List[Claim] = Field(default_factory=list)
+    attacks: List[Attack] = Field(default_factory=list)
+    defences: List[Defence] = Field(default_factory=list)
+    rulings: List[Ruling] = Field(default_factory=list)
+    classification: Optional[ClassificationSummary] = None
+    ranges: List[CountrySectorRange] = Field(default_factory=list)
+    sufficiency: str = Field(default="pending", description="'sufficient', 'send_back', or 'incomplete'")
+    missing: List[str] = Field(default_factory=list, description="Missing evidence categories if send_back")
+
+
+class CaseFile(BaseModel):
+    """
+    The central blackboard object: single source of truth shared across all agents.
+    """
+    case_id: str = Field(..., description="Unique case identifier")
+    question: str = Field(..., description="User question")
+    as_of: date = Field(..., description="Simulated Clock date")
+    status: CaseStatus = Field(default=CaseStatus.OPEN)
+    scope: Optional[EventScope] = None
+    verification: Optional[VerificationVerdict] = None
+    ingest_report: Optional[IngestReport] = None
+    runs: List[RunRecord] = Field(default_factory=list)
+    limits: Dict[str, Any] = Field(default_factory=lambda: {
+        "max_runs": 2,
+        "max_rounds": 2,
+        "tool_calls_used": 0,
+        "tokens_used": 0,
+        "limit_hit": False
+    })
+    final_briefing: Optional[str] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+
+# ---------------------------------------------------------------------------
+# Heimdall Gatekeeper Specific Detailed Models
 # ---------------------------------------------------------------------------
 
 class AnalysisWindow(BaseModel):
@@ -38,10 +118,6 @@ class CaseScope(BaseModel):
             raise ValueError(f"scope_status must be one of {allowed}")
         return v
 
-
-# ---------------------------------------------------------------------------
-# Verification
-# ---------------------------------------------------------------------------
 
 class CorrectionRecord(BaseModel):
     original_ref: str
@@ -92,14 +168,10 @@ class VerificationResult(BaseModel):
         return v
 
 
-# ---------------------------------------------------------------------------
-# Ingest Report
-# ---------------------------------------------------------------------------
-
 class DamagedItem(BaseModel):
     file_name: str
     doc_id: Optional[str] = None
-    damage_type: str  # empty | truncated | encoding | unreadable | injection_flagged | ...
+    damage_type: str
     detection_reason: str
     indexed: bool = False
     may_be_cited: bool = False
@@ -116,77 +188,61 @@ class InjectionFlag(BaseModel):
 
 class TradeTableIssue(BaseModel):
     table_id: str
-    issue_type: str  # missing_header | missing_row | repeated_row | bad_number | post_as_of | cut_off
+    issue_type: str
     details: str
-    rows_affected: List[int] = Field(default_factory=list)
 
-
-class IngestReport(BaseModel):
-    files_processed: int = 0
-    files_valid: int = 0
-    files_damaged: int = 0
-    duplicates: List[str] = Field(default_factory=list)
-    quarantined: List[DamagedItem] = Field(default_factory=list)
-    wrong_event_items: List[str] = Field(default_factory=list)
-    post_as_of_items: List[str] = Field(default_factory=list)
-    injection_flags: List[InjectionFlag] = Field(default_factory=list)
-    trade_table_issues: List[TradeTableIssue] = Field(default_factory=list)
-
-
-# ---------------------------------------------------------------------------
-# Evidence Index
-# ---------------------------------------------------------------------------
 
 class EvidenceIndexEntry(BaseModel):
-    ref: str  # DOC-ID or TABLE-ID#row
-    reason_relevant: str = ""
+    entry_id: str
+    doc_id: str
+    title: str = ""
+    source: str = ""
+    tier: str = "T4"
+    date: Optional[date] = None
     event_id: Optional[str] = None
-    date: Optional[str] = None
-    source_tier: Optional[int] = None
-    country: Optional[str] = None
-    sector: Optional[str] = None
+    topic: str = ""
+    summary: str = ""
+    exact_quote: str = ""
+    chunk_id: Optional[str] = None
+    table_id: Optional[str] = None
     usable: bool = True
-    warnings: List[str] = Field(default_factory=list)
-    is_background: bool = False  # background doc (EVENT_ID = NONE), not direct event proof
-    effective_weight: Optional[float] = None  # reliability score from formula
+    reliability_weight: float = 0.5
+    quarantine_reason: Optional[str] = None
+    tags: List[str] = Field(default_factory=list)
 
+    @field_validator("reliability_weight")
+    @classmethod
+    def _validate_weight(cls, v: float) -> float:
+        if not 0.0 <= v <= 1.0:
+            raise ValueError("reliability_weight must be between 0.0 and 1.0")
+        return v
 
-# ---------------------------------------------------------------------------
-# Memory Action (audit log entry for memory ops)
-# ---------------------------------------------------------------------------
 
 class MemoryAction(BaseModel):
-    action: str  # read | write | update | supersede
-    memory_id: str
-    agent: str = "heimdall"
-    reason: str = ""
-    previous_state: Optional[str] = None
-    new_state: Optional[str] = None
+    action: str  # write | read | update | supersede | none
+    agent_id: str = "heimdall"
+    memory_type: str = "case_context"
+    content: str = ""
+    basis_refs: List[str] = Field(default_factory=list)
+    status: str = "active"
 
-
-# ---------------------------------------------------------------------------
-# Audit Event
-# ---------------------------------------------------------------------------
 
 class AuditEvent(BaseModel):
     event_type: str
-    agent: str = "heimdall"
-    run_no: int = 1
-    details: dict[str, Any] = Field(default_factory=dict)
+    actor: str = "heimdall"
     timestamp: Optional[str] = None
+    details: Dict[str, Any] = Field(default_factory=dict)
 
-
-# ---------------------------------------------------------------------------
-# Top-level Heimdall Case File output
-# ---------------------------------------------------------------------------
 
 class HeimdallOutput(BaseModel):
-    agent: str = "heimdall"
-    run_no: int = 1
+    case_id: str
+    event_name: str
+    event_id: Optional[str] = None
+    as_of: Optional[date] = None
     status: str = "complete"  # complete | incomplete | failed
     scope: CaseScope = Field(default_factory=CaseScope)
     verification: VerificationResult = Field(default_factory=VerificationResult)
-    ingest_report: IngestReport = Field(default_factory=IngestReport)
+    ingest_report: Optional[IngestReport] = None
     evidence_index: List[EvidenceIndexEntry] = Field(default_factory=list)
     evidence_gaps: List[str] = Field(default_factory=list)
     new_evidence: List[EvidenceIndexEntry] = Field(default_factory=list)
