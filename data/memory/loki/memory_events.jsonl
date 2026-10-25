@@ -1,0 +1,2 @@
+{"timestamp": "2026-10-25T09:22:11.613634+00:00", "agent_id": "loki", "event_type": "memory_written", "memory_id": "loki_mem_1", "content": "Look for alternative grain ports in Alfheim"}
+{"timestamp": "2026-10-25T09:22:11.613899+00:00", "agent_id": "loki", "event_type": "memory_read", "scope_queried": null, "count": 1}

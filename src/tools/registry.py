@@ -183,10 +183,18 @@ class AgentToolRegistry:
 
     def _exec_get_doc(self, **kwargs) -> Optional[Dict[str, Any]]:
         doc_id = kwargs.get("doc_id", "").upper()
-        res = self.searcher.client.table("runemark_documents").select("*").eq("doc_id", doc_id).execute()
-        if res.data and len(res.data) > 0:
-            return res.data[0]
-        return None
+        try:
+            res = self.searcher.admin.table("runemark_documents").select("*").eq("doc_id", doc_id).execute()
+            if res.data and len(res.data) > 0:
+                return res.data[0]
+        except Exception:
+            pass
+
+        try:
+            from src.ingestion.okf_converter import OKFConverter
+            return OKFConverter.load_okf_document(doc_id)
+        except Exception:
+            return None
 
     def _exec_find_tables(self, **kwargs) -> List[Dict[str, Any]]:
         query = self.trade_engine.client.table("trade_tables").select("*")

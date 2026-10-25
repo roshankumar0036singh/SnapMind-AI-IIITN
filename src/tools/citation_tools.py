@@ -106,6 +106,14 @@ class CitationValidator:
                 pass
 
         if not doc_data:
+            # Fallback to local OKF normalized document store on disk
+            try:
+                from src.ingestion.okf_converter import OKFConverter
+                doc_data = OKFConverter.load_okf_document(doc_id)
+            except Exception:
+                pass
+
+        if not doc_data:
             return CitationVerifyResponse(
                 citation_ref=citation_ref,
                 is_valid=False,

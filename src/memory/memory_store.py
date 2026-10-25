@@ -127,6 +127,31 @@ def write_memory(
         reason=f"New {memory_type} lesson created",
     )
 
+    # Save local OKF note card for visual inspection (Acceptance Check 9)
+    try:
+        from pathlib import Path
+        from src.ingestion.okf_converter import OKFConverter
+        from src.schemas.memory import MemoryRecord, MemoryType, MemoryScope
+
+        mem_record = MemoryRecord(
+            id=mem_id,
+            agent_id=agent_id,
+            memory_type=MemoryType(memory_type) if memory_type in [m.value for m in MemoryType] else MemoryType.SOURCE_LESSON,
+            content=content,
+            scope=MemoryScope.GLOBAL,
+            scope_value=str(scope) if scope else None,
+            basis_refs=basis_refs,
+            confidence=confidence,
+            created_run=run_no,
+            status="active",
+        )
+        okf_base = Path("data/runemark_processed/okf_memories") / agent_id.lower()
+        okf_base.mkdir(parents=True, exist_ok=True)
+        card_content = OKFConverter.format_memory_as_okf(mem_record)
+        (okf_base / f"{mem_id}.md").write_text(card_content, encoding="utf-8")
+    except Exception:
+        pass
+
     return result.data[0] if result.data else record
 
 
@@ -174,6 +199,26 @@ def read_memory(
     q = q.order("confidence", desc=True).limit(top_k * 3)  # over-fetch for client-side ranking
     result = q.execute()
     records = result.data or []
+
+    # If database returned nothing, fallback to local OKF memory cards
+    if not records:
+        try:
+            from src.ingestion.okf_converter import OKFConverter
+            local_recs = OKFConverter.load_agent_memories_from_okf(agent_id)
+            for lr in local_recs:
+                records.append({
+                    "id": lr.id,
+                    "agent_id": lr.agent_id,
+                    "memory_type": lr.memory_type.value if hasattr(lr.memory_type, "value") else str(lr.memory_type),
+                    "content": lr.content,
+                    "scope": json.dumps({"value": lr.scope_value}),
+                    "basis_refs": json.dumps(lr.basis_refs),
+                    "confidence": lr.confidence,
+                    "created_run": lr.created_run,
+                    "status": lr.status,
+                })
+        except Exception:
+            pass
 
     # Client-side filter by event_id in scope JSON
     if "event_id" in filters and filters["event_id"]:

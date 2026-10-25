@@ -6,6 +6,7 @@ from typing import List, Dict, Any, Optional
 from src.supabase_client import get_supabase_admin
 from src.llm.embeddings import get_embedding_client
 from src.ingestion.manifest_loader import ManifestLoader, ManifestLoadResult
+from src.ingestion.okf_converter import OKFConverter
 from src.schemas.ingest import IngestReport
 
 
@@ -112,6 +113,14 @@ class SupabaseDocumentLoader:
                 raise RuntimeError(f"Supabase upsert failed at batch {i}: {e}")
 
         print(f"Successfully ingested pack '{load_result.pack_name}' into Supabase.")
+
+        # Save normalized Open Knowledge Format (OKF) markdown documents
+        try:
+            okf_paths = OKFConverter.convert_and_save_pack(pack_path)
+            print(f"Normalized {len(okf_paths)} documents into Open Knowledge Format (OKF) in {OKFConverter.DEFAULT_OKF_DOCS_DIR}")
+        except Exception as e:
+            print(f"Note: OKF document normalization skipped/failed: {e}")
+
         return load_result.ingest_report
 
 

@@ -323,18 +323,29 @@ def get_doc(
     _check_budget()
     db = get_supabase_admin()
 
-    result = (
-        db.table("runemark_documents")
-        .select("*")
-        .eq("doc_id", doc_id)
-        .limit(1)
-        .execute()
-    )
+    doc = None
+    try:
+        result = (
+            db.table("runemark_documents")
+            .select("*")
+            .eq("doc_id", doc_id)
+            .limit(1)
+            .execute()
+        )
+        if result.data:
+            doc = result.data[0]
+    except Exception:
+        pass
 
-    if not result.data:
+    if not doc:
+        try:
+            from src.ingestion.okf_converter import OKFConverter
+            doc = OKFConverter.load_okf_document(doc_id)
+        except Exception:
+            pass
+
+    if not doc:
         return None
-
-    doc = result.data[0]
 
     # As-of gate
     if as_of and doc.get("pub_date"):
