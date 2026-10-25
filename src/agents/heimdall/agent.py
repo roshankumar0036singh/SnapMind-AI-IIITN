@@ -367,6 +367,40 @@ def run_heimdall(
                         docs.append(cd)
                         new_found_docs.append(cd)
 
+        # Active memory adaptation: if prior memories note failed queries or query strategies
+        if prior_memories:
+            for m in prior_memories:
+                m_type = m.get("memory_type", "")
+                m_content = m.get("content", "")
+                if m_type in ("failed_query", "query_strategy", "source_warning") and len(m_content) > 10:
+                    # Clean the gap / strategy note to form a focused search query
+                    clean_note = re.sub(r'Evidence gaps in run \d+:\s*', '', m_content)
+                    adapted_query = f"{question[:120]} {clean_note[:80]}"
+                    mem_docs = search_docs(
+                        query=adapted_query,
+                        as_of=as_of,
+                        event_id=event_id,
+                        top_k=4,
+                    )
+                    added_from_mem = False
+                    for md in mem_docs:
+                        if not any(d.get("doc_id") == md.get("doc_id") for d in docs):
+                            docs.append(md)
+                            new_found_docs.append(md)
+                            added_from_mem = True
+
+                    if added_from_mem:
+                        _audit("query_changed_by_memory", {
+                            "memory_id": m.get("id"),
+                            "reason": f"Adapted search based on {m_type} memory: {m_content[:80]}",
+                            "new_query": adapted_query,
+                        })
+                        memory_actions.append(MemoryAction(
+                            action="applied",
+                            memory_id=m.get("id", ""),
+                            reason=f"Search expanded using guidance from {m_type}.",
+                        ))
+
         if docs:
             initial_docs_context = "\n\nRETRIEVED CORPUS DOCUMENTS (evidence candidates):\n"
             for d in docs:
