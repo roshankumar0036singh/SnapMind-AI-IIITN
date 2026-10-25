@@ -36,14 +36,25 @@ class ThorToolsBinding:
         Executes hybrid document search focusing on high-exposure angles:
         port closures, structural damage, capacity loss, supply shortages, price surges.
         """
+        # Embed target countries, sectors, and question into query text for hybrid BM25 + Vector ranking
+        terms = [question]
+        if country:
+            terms.append(country)
+        if sector:
+            terms.append(sector)
+        if event_id:
+            terms.append(event_id)
+
         query_text = (
-            f"closure shutdown blockade damage capacity loss crisis drop bottleneck {question}"
+            f"closure shutdown blockade damage capacity loss crisis drop bottleneck {' '.join(terms)}"
         )
+        # We enforce hard as_of_date, reliability tier, and quarantine gates.
+        # Country/sector are ranked by vector & BM25 to avoid excluding exporting origin nations (e.g. Orvan to Midgard).
         filters = SearchFilters(
             as_of_date=as_of_date,
-            country=country,
-            sector=sector,
-            event_id=event_id,
+            country=None,  # Handled via BM25/Vector query to capture bilateral flows
+            sector=None,
+            event_id=None,
             tier_max=max_tier,
             exclude_retracted=True,
             exclude_damaged=True,

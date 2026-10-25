@@ -38,15 +38,23 @@ class LokiToolsBinding:
         alternative rail routes, secondary ports, emergency stockpiles, inventory buffers,
         tariffs waived, commercial substitution.
         """
+        terms = [question]
+        if country:
+            terms.append(country)
+        if sector:
+            terms.append(sector)
+        if event_id:
+            terms.append(event_id)
+
         query_text = (
-            f"alternative route rail substitution stockpile inventory reserve recovery buffer {question}"
+            f"alternative route rail substitution stockpile inventory reserve recovery buffer {' '.join(terms)}"
         )
-        # Broaden country filter slightly to find neighboring alternative supplier routes
+        # Broaden country/sector filters to catch bilateral corridor agreements
         filters = SearchFilters(
             as_of_date=as_of_date,
-            country=country,
-            sector=sector,
-            event_id=event_id,
+            country=None,
+            sector=None,
+            event_id=None,
             tier_max=max_tier,
             exclude_retracted=True,
             exclude_damaged=True,
