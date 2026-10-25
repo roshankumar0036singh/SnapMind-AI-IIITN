@@ -46,6 +46,18 @@ from src.schemas.case_file import (
     VerificationVerdict,
     RunRecord,
     CaseFile,
+    AnalysisWindow,
+    CaseScope,
+    CorrectionRecord,
+    ContradictionRecord,
+    VerificationResult,
+    DamagedItem,
+    InjectionFlag,
+    TradeTableIssue,
+    EvidenceIndexEntry,
+    MemoryAction,
+    AuditEvent,
+    HeimdallOutput,
 )
 
 __all__ = [
@@ -84,10 +96,22 @@ __all__ = [
     "Ruling",
     "ClassificationSummary",
     "CountrySectorRange",
-    # Case File
+    # Case File (Blackboard & Heimdall)
     "CaseStatus",
     "EventScope",
     "VerificationVerdict",
     "RunRecord",
     "CaseFile",
+    "AnalysisWindow",
+    "CaseScope",
+    "CorrectionRecord",
+    "ContradictionRecord",
+    "VerificationResult",
+    "DamagedItem",
+    "InjectionFlag",
+    "TradeTableIssue",
+    "EvidenceIndexEntry",
+    "MemoryAction",
+    "AuditEvent",
+    "HeimdallOutput",
 ]
