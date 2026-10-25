@@ -58,12 +58,29 @@ def run_heimdall(*args, **kwargs) -> Any:
     Gatekeeper & evidence gathering entry point.
     Can be monkeypatched in unit tests.
     """
+    if "case" in kwargs:
+        c = kwargs["case"]
+        missing_cats = []
+        if c.runs:
+            missing_cats = getattr(c.runs[-1], "missing", []) or []
+        event_id = c.scope.event_id if c.scope else None
+        as_of_str = str(c.as_of) if c.as_of else ""
+        return _real_run_heimdall(
+            case_id=c.case_id,
+            question=c.question,
+            as_of_date=as_of_str,
+            event_id=event_id,
+            run_no=kwargs.get("run_no", 1),
+            send_back_categories=missing_cats if kwargs.get("run_no", 1) > 1 else None,
+        )
     if "case_id" in kwargs:
         return _real_run_heimdall(
             case_id=kwargs["case_id"],
             question=kwargs.get("question", ""),
             as_of_date=kwargs.get("as_of_date", ""),
             event_id=kwargs.get("event_id"),
+            run_no=kwargs.get("run_no", 1),
+            send_back_categories=kwargs.get("send_back_categories"),
         )
     return {"status": "real", "new_evidence": [], "evidence_gaps": []}
 
@@ -100,19 +117,26 @@ from src.supabase_client import get_supabase_admin
 
 
 # ---------------------------------------------------------------------------
-# Console helpers
-# ---------------------------------------------------------------------------
+import sys
+
+def _safe_print(text: str = "") -> None:
+    try:
+        print(text)
+    except UnicodeEncodeError:
+        encoding = getattr(sys.stdout, "encoding", "ascii") or "ascii"
+        print(text.encode(encoding, errors="replace").decode(encoding))
+
 
 def print_banner(title: str) -> None:
-    print("\n" + "=" * 80)
-    print(f"  {title}")
-    print("=" * 80)
+    _safe_print("\n" + "=" * 80)
+    _safe_print(f"  {title}")
+    _safe_print("=" * 80)
 
 
 def print_section(title: str) -> None:
-    print("\n" + "-" * 80)
-    print(f">>> {title}")
-    print("-" * 80)
+    _safe_print("\n" + "-" * 80)
+    _safe_print(f">>> {title}")
+    _safe_print("-" * 80)
 
 
 def print_budget_status(budget: DebateBudget, cycle: int) -> None:
@@ -440,7 +464,7 @@ async def _execute_debate_cycles(case: CaseFile, run_no: int = 1) -> Dict[str, A
     # -----------------------------------------------------------------------
     if termination_reason == DebateTerminationReason.LIMIT_HIT:
         case.status = CaseStatus.DEBATE_LIMIT_HIT
-        print_banner("⚠ DEBATE TERMINATED — SAFETY BUDGET EXHAUSTED")
+        print_banner("[!] DEBATE TERMINATED - SAFETY BUDGET EXHAUSTED")
         print(f"Budget Hit   : {budget.limit_hit}")
         print(f"Annotation   : {termination_annotation}")
         print("Note         : Case is closed with available evidence. Odin will adjudicate what exists.")
@@ -448,13 +472,13 @@ async def _execute_debate_cycles(case: CaseFile, run_no: int = 1) -> Dict[str, A
 
     elif termination_reason == DebateTerminationReason.STALLED:
         case.status = CaseStatus.DEBATE_STALLED
-        print_banner("⚠ DEBATE STALLED — NO FURTHER PROGRESS POSSIBLE")
+        print_banner("[!] DEBATE STALLED - NO FURTHER PROGRESS POSSIBLE")
         print(f"Annotation   : {termination_annotation}")
         print("Note         : Case is closed with available evidence. Odin will adjudicate what exists.")
 
     else:
         # CONVERGED
-        print_banner("✓ DEBATE CONVERGED — STATE-DRIVEN CONSENSUS REACHED")
+        print_banner("[OK] DEBATE CONVERGED - STATE-DRIVEN CONSENSUS REACHED")
         print(f"Annotation   : {termination_annotation}")
 
     # -----------------------------------------------------------------------
@@ -633,16 +657,16 @@ def run_convergence_debate(case: CaseFile) -> CaseFile:
 
         # Send-back condition:
         # Odin found insufficient evidence AND we still have evidence run budget
-        if sufficiency == "insufficient" and budget.evidence_runs < max_evidence_runs:
+        if sufficiency in ("insufficient", "send_back") and budget.evidence_runs < max_evidence_runs:
             print(
-                f"\n[Runner] Odin evaluated Run {run_no}: INSUFFICIENT. Missing: {missing}. "
+                f"\n[Runner] Odin evaluated Run {run_no}: {sufficiency.upper()}. Missing: {missing}. "
                 f"Sending back to Heimdall for evidence run {budget.evidence_runs + 1}/{max_evidence_runs}..."
             )
             case.runs.append(RunRecord(run_no=budget.evidence_runs + 1))
             continue
 
         # Terminal state determination
-        if sufficiency in ("insufficient", "incomplete"):
+        if sufficiency in ("insufficient", "incomplete", "send_back"):
             reason = DebateTerminationReason.LIMIT_HIT
             budget.limit_hit = "evidence_run_budget_exhausted"
             case.status = CaseStatus.CLOSED_INCOMPLETE
@@ -689,6 +713,74 @@ def run_convergence_debate(case: CaseFile) -> CaseFile:
 # ---------------------------------------------------------------------------
 # Full Trial Pipeline
 # ---------------------------------------------------------------------------
+
+def distill_agent_memories_post_trial(case: CaseFile, run_no: int = 1) -> None:
+    """
+    Distills durable strategic lessons for Thor and Loki from Odin's rulings (FR6.1).
+    - If a claim was REJECTED: advocating agent records a source/method lesson to prevent repeating errors.
+    - If a claim was CONCEDED: conceding agent records a concession lesson.
+    """
+    if not case.runs:
+        return
+
+    active_run_list = [r for r in case.runs if r.run_no == run_no]
+    if not active_run_list:
+        return
+    run = active_run_list[0]
+
+    claims_by_id = {c.claim_id: c for c in run.claims}
+    from src.schemas.rulings import RulingOutcome
+    from src.memory.manager import get_memory_manager
+    from src.schemas.memory import MemoryScope, MemoryType
+
+    mgr = get_memory_manager()
+
+    for r in run.rulings:
+        claim = claims_by_id.get(r.claim_id)
+        if not claim:
+            continue
+
+        agent_id = claim.agent.lower()
+        if agent_id not in ("thor", "loki"):
+            continue
+
+        if r.outcome == RulingOutcome.REJECTED:
+            lesson_text = (
+                f"Claim on {claim.country}/{claim.sector} was REJECTED by Odin: {r.reasoning}. "
+                f"In future investigations, substantiate with higher-tier corroboration."
+            )
+            try:
+                mgr.write_memory(
+                    agent_id=agent_id,
+                    memory_type=MemoryType.SOURCE_LESSON,
+                    content=lesson_text,
+                    scope=MemoryScope.COUNTRY,
+                    scope_value=claim.country,
+                    basis_refs=[r.ruling_id] + claim.citations[:2],
+                    confidence=0.95,
+                    run_no=run.run_no,
+                )
+            except Exception:
+                pass
+
+        elif r.outcome == RulingOutcome.CONCEDED:
+            lesson_text = (
+                f"Conceded on {claim.claim_id} ({claim.country}/{claim.sector}): {r.reasoning}. "
+                f"Avoid over-claiming without baseline trade confirmation."
+            )
+            try:
+                mgr.write_memory(
+                    agent_id=agent_id,
+                    memory_type=MemoryType.SOURCE_LESSON,
+                    content=lesson_text,
+                    scope=MemoryScope.SECTOR,
+                    scope_value=claim.sector,
+                    basis_refs=[r.ruling_id],
+                    confidence=0.90,
+                    run_no=run.run_no,
+                )
+            except Exception:
+                pass
 
 async def run_trial_pipeline(
     question: str,
@@ -761,6 +853,30 @@ async def run_trial_pipeline(
         except Exception:
             pass
 
+        # Create rejected case file for export
+        as_of_date = date.fromisoformat(as_of)
+        rejected_case = CaseFile(
+            case_id=case_id,
+            question=question,
+            as_of=as_of_date,
+            status=CaseStatus.REJECTED,
+            verification=VerificationVerdict(
+                verdict=verdict_str,
+                confidence=confidence,
+                reasons=reasons,
+                message_to_user="Disruption event rejected / not verified in corpus.",
+            ),
+            runs=[],
+        )
+        try:
+            from src.engine.case_exporter import CaseExporter
+            CaseExporter.export_case_bundle(
+                rejected_case,
+                briefing_text=f"# Disruption Event Rejected\n\n**Verdict:** {verdict_str.upper()}\n**Confidence:** {confidence * 100:.0f}%\n\n### Reasons:\n" + "\n".join(f"- {r}" for r in reasons),
+            )
+        except Exception:
+            pass
+
         return {
             "case_id": case_id,
             "status": "rejected",
@@ -768,7 +884,7 @@ async def run_trial_pipeline(
             "confidence": confidence,
             "reasons": reasons,
             "wake_next": wake_next,
-            "case_file": None,
+            "case_file": rejected_case,
         }
 
     # Step 4: Approved Case — Build CaseFile, configure budget, enter debate loop
@@ -853,7 +969,7 @@ async def run_trial_pipeline(
         DebateTerminationReason.LIMIT_HIT,
         DebateTerminationReason.STALLED,
     ):
-        print_section("⚠ INCOMPLETE CASE NOTICE")
+        print_section("[!] INCOMPLETE CASE NOTICE")
         print(f"This case was closed due to: {termination.reason.value.upper()}")
         print(f"Budget hit  : {termination.budget_hit or 'N/A'}")
         print(f"Annotation  : {termination.annotation}")
@@ -865,6 +981,15 @@ async def run_trial_pipeline(
     if completed_case.final_briefing:
         print_banner("ODIN'S FINAL EXECUTIVE BRIEFING (OKF FORMAT)")
         print(completed_case.final_briefing)
+
+    # -----------------------------------------------------------------------
+    # Step 6: Distill Post-Trial Agent Memories (FR6.1)
+    # -----------------------------------------------------------------------
+    try:
+        for idx in range(len(completed_case.runs)):
+            distill_agent_memories_post_trial(completed_case, run_no=idx + 1)
+    except Exception as e:
+        print(f"[Warning] Post-trial memory distillation skipped: {e}")
 
     # Synchronize completed case to Supabase
     try:
@@ -888,6 +1013,17 @@ async def run_trial_pipeline(
     except Exception:
         pass
 
+    # Step 7: Export full reproducibility bundle to saved_cases/<case_id>/ (NFR6)
+    bundle_paths: Dict[str, Any] = {}
+    try:
+        from src.engine.case_exporter import CaseExporter
+        bundle_paths = CaseExporter.export_case_bundle(completed_case)
+        print_section("LOCAL CASE REPRODUCIBILITY BUNDLE EXPORTED (NFR6)")
+        for key, pth in bundle_paths.items():
+            print(f"  * {key:20s}: {pth}")
+    except Exception as e:
+        print(f"[Warning] Failed to export case bundle: {e}")
+
     return {
         "case_id": case_id,
         "status": str(completed_case.status),
@@ -896,7 +1032,8 @@ async def run_trial_pipeline(
         "reasons": reasons,
         "wake_next": wake_next,
         "termination": termination.model_dump(mode="json") if termination else None,
-        "debate_cycles": cycle if "cycle" in dir() else 0,
+        "debate_cycles": getattr(completed_case.budget, "turns_used", 0) if completed_case.budget else 0,
         "case_file": completed_case,
         "judicial_output": judicial_output,
+        "bundle_paths": {k: str(v) for k, v in bundle_paths.items()},
     }

@@ -93,8 +93,8 @@ class MemoryManager:
     def write_memory(
         self,
         agent_id: str,
-        memory_type: Any = "search_strategy",
-        content: str = "",
+        memory_type: Any,
+        content: str,
         scope: Any = MemoryScope.GLOBAL,
         scope_value: Optional[str] = None,
         basis_refs: Optional[List[str]] = None,
@@ -102,10 +102,10 @@ class MemoryManager:
         run_no: int = 1,
     ) -> MemoryRecord:
         """
-        Alias for record_lesson accepting string or enum inputs from AgentToolRegistry.
+        Convenience wrapper supporting string or enum memory_type and scope.
         """
         if isinstance(memory_type, str):
-            mem_str = memory_type.lower()
+            mem_str = memory_type.lower().strip()
             if mem_str in ("strategy", "search_strategy"):
                 memory_type = MemoryType.SEARCH_STRATEGY
             elif mem_str in ("source", "source_lesson"):
@@ -124,7 +124,7 @@ class MemoryManager:
 
         if isinstance(scope, str):
             try:
-                scope = MemoryScope(scope.lower())
+                scope = MemoryScope(scope.lower().strip())
             except Exception:
                 scope = MemoryScope.GLOBAL
 

@@ -26,6 +26,8 @@ class AgentMemoryStore:
     @property
     def admin(self):
         if self._admin is None:
+            if self._client is not None:
+                return self._client
             self._admin = get_supabase_admin()
         return self._admin
 

@@ -35,16 +35,12 @@ class RetrievalTools:
         self.supabase = get_supabase_admin()
 
     def get_embedding(self, text: str) -> List[float]:
-        """Generate 768-dimensional embedding using Gemini text-embedding-004."""
-        if not self.gemini_client:
-            # Fallback zero vector if no key is provided during offline setup
+        """Generate 768-dimensional embedding using Gemini gemini-embedding-2."""
+        from src.llm.embeddings import get_embedding_client
+        emb_client = get_embedding_client()
+        if not emb_client or not emb_client.api_key:
             return [0.0] * 768
-        
-        response = self.gemini_client.models.embed_content(
-            model="text-embedding-004",
-            contents=text,
-        )
-        return response.embeddings[0].values
+        return emb_client.get_embedding(text)
 
     def search_docs(
         self,
