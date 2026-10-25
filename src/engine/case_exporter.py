@@ -51,6 +51,19 @@ class CaseExporter:
             or getattr(case_file, "briefing", None)
             or "# Executive Briefing\n\nNo briefing recorded."
         )
+
+        from src.ingestion.okf_converter import OKFConverter
+        import re
+
+        # Extract cited references from briefing body and format as OKF wiki-links [[REF]]
+        found_citations = re.findall(r"\[([A-Z0-9]+-[A-Z0-9]+(?:#P\d+|#\d+)?)\]", briefing_body, re.IGNORECASE)
+        okf_links = [
+            f"[[{c}]]" for c in dict.fromkeys(found_citations)
+            if c.upper() not in ("LOW, HIGH", "UPHELD", "REJECTED", "CONCEDED", "CONTESTED")
+        ]
+        # Also include any direct [[REF]] links present
+        okf_links = list(dict.fromkeys(okf_links + OKFConverter.extract_wiki_links(briefing_body)))
+
         frontmatter = {
             "case_id": case_file.case_id,
             "question": case_file.question,
@@ -59,6 +72,7 @@ class CaseExporter:
             "verdict": getattr(case_file.verification.verdict, "value", str(case_file.verification.verdict)) if case_file.verification else "unknown",
             "total_runs": len(case_file.runs),
             "generated_at": datetime.now(timezone.utc).isoformat(),
+            "links": okf_links,
         }
         yaml_header = yaml.dump(frontmatter, sort_keys=False, default_flow_style=False).strip()
         briefing_okf_content = f"---\n{yaml_header}\n---\n\n{briefing_body.strip()}\n"
@@ -92,5 +106,48 @@ class CaseExporter:
         scorecard_path = case_dir / "trap_scorecard.json"
         scorecard_path.write_text(json.dumps(scorecard, indent=2), encoding="utf-8")
         bundle_paths["trap_scorecard"] = scorecard_path
+
+        # 5. Export agent memories in OKF format (Acceptance Check 9)
+        memories_dir = case_dir / "memories"
+        memories_dir.mkdir(parents=True, exist_ok=True)
+        try:
+            from src.supabase_client import get_supabase_admin
+            from src.schemas.memory import MemoryRecord, MemoryType, MemoryScope
+            db = get_supabase_admin()
+            mem_res = db.table("agent_memories").select("*").execute()
+            records: List[MemoryRecord] = []
+            if mem_res.data:
+                for mem in mem_res.data:
+                    raw_refs = mem.get("basis_refs", [])
+                    if isinstance(raw_refs, str):
+                        try:
+                            raw_refs = json.loads(raw_refs)
+                        except Exception:
+                            raw_refs = [raw_refs]
+                    records.append(
+                        MemoryRecord(
+                            id=mem.get("id"),
+                            agent_id=str(mem.get("agent_id") or "agent").lower(),
+                            memory_type=MemoryType(mem.get("memory_type", "source_lesson")),
+                            content=mem.get("content", ""),
+                            scope=MemoryScope(mem.get("scope", "global")),
+                            scope_value=mem.get("scope_value"),
+                            confidence=float(mem.get("confidence", 1.0)),
+                            status=mem.get("status", "active"),
+                            created_run=int(mem.get("created_run", 1)),
+                            basis_refs=raw_refs,
+                        )
+                    )
+
+            # If Supabase has no records or offline, fallback to local OKF memories
+            if not records:
+                for agent_name in ["heimdall", "thor", "loki", "odin"]:
+                    records.extend(OKFConverter.load_agent_memories_from_okf(agent_name))
+
+            if records:
+                OKFConverter.export_agent_memories_to_okf(records, output_dir=memories_dir)
+            bundle_paths["memories_dir"] = memories_dir
+        except Exception:
+            pass
 
         return bundle_paths
