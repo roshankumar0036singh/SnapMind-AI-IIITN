@@ -690,6 +690,74 @@ def run_convergence_debate(case: CaseFile) -> CaseFile:
 # Full Trial Pipeline
 # ---------------------------------------------------------------------------
 
+def distill_agent_memories_post_trial(case: CaseFile, run_no: int = 1) -> None:
+    """
+    Distills durable strategic lessons for Thor and Loki from Odin's rulings (FR6.1).
+    - If a claim was REJECTED: advocating agent records a source/method lesson to prevent repeating errors.
+    - If a claim was CONCEDED: conceding agent records a concession lesson.
+    """
+    if not case.runs:
+        return
+
+    active_run_list = [r for r in case.runs if r.run_no == run_no]
+    if not active_run_list:
+        return
+    run = active_run_list[0]
+
+    claims_by_id = {c.claim_id: c for c in run.claims}
+    from src.schemas.rulings import RulingOutcome
+    from src.memory.manager import get_memory_manager
+    from src.schemas.memory import MemoryScope, MemoryType
+
+    mgr = get_memory_manager()
+
+    for r in run.rulings:
+        claim = claims_by_id.get(r.claim_id)
+        if not claim:
+            continue
+
+        agent_id = claim.agent.lower()
+        if agent_id not in ("thor", "loki"):
+            continue
+
+        if r.outcome == RulingOutcome.REJECTED:
+            lesson_text = (
+                f"Claim on {claim.country}/{claim.sector} was REJECTED by Odin: {r.reasoning}. "
+                f"In future investigations, substantiate with higher-tier corroboration."
+            )
+            try:
+                mgr.write_memory(
+                    agent_id=agent_id,
+                    memory_type=MemoryType.SOURCE_LESSON,
+                    content=lesson_text,
+                    scope=MemoryScope.COUNTRY,
+                    scope_value=claim.country,
+                    basis_refs=[r.ruling_id] + claim.citations[:2],
+                    confidence=0.95,
+                    run_no=run.run_no,
+                )
+            except Exception:
+                pass
+
+        elif r.outcome == RulingOutcome.CONCEDED:
+            lesson_text = (
+                f"Conceded on {claim.claim_id} ({claim.country}/{claim.sector}): {r.reasoning}. "
+                f"Avoid over-claiming without baseline trade confirmation."
+            )
+            try:
+                mgr.write_memory(
+                    agent_id=agent_id,
+                    memory_type=MemoryType.SOURCE_LESSON,
+                    content=lesson_text,
+                    scope=MemoryScope.SECTOR,
+                    scope_value=claim.sector,
+                    basis_refs=[r.ruling_id],
+                    confidence=0.90,
+                    run_no=run.run_no,
+                )
+            except Exception:
+                pass
+
 async def run_trial_pipeline(
     question: str,
     as_of: str = "2027-01-25",
@@ -761,6 +829,30 @@ async def run_trial_pipeline(
         except Exception:
             pass
 
+        # Create rejected case file for export
+        as_of_date = date.fromisoformat(as_of)
+        rejected_case = CaseFile(
+            case_id=case_id,
+            question=question,
+            as_of=as_of_date,
+            status=CaseStatus.REJECTED,
+            verification=VerificationVerdict(
+                verdict=verdict_str,
+                confidence=confidence,
+                reasons=reasons,
+                message_to_user="Disruption event rejected / not verified in corpus.",
+            ),
+            runs=[],
+        )
+        try:
+            from src.engine.case_exporter import CaseExporter
+            CaseExporter.export_case_bundle(
+                rejected_case,
+                briefing_text=f"# Disruption Event Rejected\n\n**Verdict:** {verdict_str.upper()}\n**Confidence:** {confidence * 100:.0f}%\n\n### Reasons:\n" + "\n".join(f"- {r}" for r in reasons),
+            )
+        except Exception:
+            pass
+
         return {
             "case_id": case_id,
             "status": "rejected",
@@ -768,7 +860,7 @@ async def run_trial_pipeline(
             "confidence": confidence,
             "reasons": reasons,
             "wake_next": wake_next,
-            "case_file": None,
+            "case_file": rejected_case,
         }
 
     # Step 4: Approved Case — Build CaseFile, configure budget, enter debate loop
@@ -862,9 +954,53 @@ async def run_trial_pipeline(
         if completed_case.status == CaseStatus.OPEN:
             completed_case.status = CaseStatus.CLOSED_INCOMPLETE
 
+    # -----------------------------------------------------------------------
+    # Step 5b: Send-Back & Run 2 Multi-Run Execution (FR1.4, FR5.4, Acceptance Check 8)
+    # -----------------------------------------------------------------------
+    suff_status = getattr(run1.sufficiency, "status", str(run1.sufficiency or ""))
+    if (
+        (judicial_output.get("action") == "send_back" or suff_status == "send_back")
+        and len(completed_case.runs) < completed_case.limits.get("max_runs", 2)
+    ):
+        print_banner("ODIN ISSUED SEND-BACK: INITIATING RUN 2 WITH TARGETED RE-SEARCH")
+        missing_cats = run1.missing if hasattr(run1, "missing") and run1.missing else []
+        print(f"Missing Evidence Categories Identified by Odin: {missing_cats}")
+
+        # FR1.4: Heimdall re-searches targeting missing categories
+        print_section("HEIMDALL RE-SEARCH FOR RUN 2")
+        run_heimdall(
+            case_id=case_id,
+            question=question,
+            as_of_date=as_of,
+            event_id=event_id,
+            send_back_categories=missing_cats,
+        )
+
+        # Append Run 2 and execute adversarial debate with new evidence
+        completed_case.runs.append(RunRecord(run_no=2))
+        completed_case = await run_thor_and_loki_debate(completed_case)
+
+        # Phase 3 Run 2 Adjudication (terminates loop as run_no >= max_runs = 2)
+        completed_case, judicial_output = odin.evaluate_case(completed_case, run_no=2)
+        run2 = completed_case.runs[1]
+        print_section("ODIN'S FINAL VERDICT ON RUN 2")
+        print(f"Total Claims Adjudicated in Run 2 : {len(run2.rulings)}")
+        for r in run2.rulings:
+            print(f"  * Ruling on {r.claim_id}: [{r.outcome.value.upper()}] ({r.basis.value}) - {r.reasoning}")
+
     if completed_case.final_briefing:
         print_banner("ODIN'S FINAL EXECUTIVE BRIEFING (OKF FORMAT)")
         print(completed_case.final_briefing)
+
+    # -----------------------------------------------------------------------
+    # Step 6: Distill Post-Trial Agent Memories (FR6.1)
+    # -----------------------------------------------------------------------
+    try:
+        distill_agent_memories_post_trial(completed_case, run_no=1)
+        if len(completed_case.runs) > 1:
+            distill_agent_memories_post_trial(completed_case, run_no=2)
+    except Exception as e:
+        print(f"[Warning] Post-trial memory distillation skipped: {e}")
 
     # Synchronize completed case to Supabase
     try:
@@ -888,6 +1024,17 @@ async def run_trial_pipeline(
     except Exception:
         pass
 
+    # Step 7: Export full reproducibility bundle to saved_cases/<case_id>/ (NFR6)
+    bundle_paths: Dict[str, Any] = {}
+    try:
+        from src.engine.case_exporter import CaseExporter
+        bundle_paths = CaseExporter.export_case_bundle(completed_case)
+        print_section("LOCAL CASE REPRODUCIBILITY BUNDLE EXPORTED (NFR6)")
+        for key, pth in bundle_paths.items():
+            print(f"  * {key:20s}: {pth}")
+    except Exception as e:
+        print(f"[Warning] Failed to export case bundle: {e}")
+
     return {
         "case_id": case_id,
         "status": str(completed_case.status),
@@ -899,4 +1046,5 @@ async def run_trial_pipeline(
         "debate_cycles": cycle if "cycle" in dir() else 0,
         "case_file": completed_case,
         "judicial_output": judicial_output,
+        "bundle_paths": {k: str(v) for k, v in bundle_paths.items()},
     }

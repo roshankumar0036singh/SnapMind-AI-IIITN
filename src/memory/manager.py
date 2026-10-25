@@ -1,5 +1,5 @@
 import uuid
-from typing import List, Optional
+from typing import List, Optional, Any
 
 from src.memory.store import AgentMemoryStore
 from src.schemas.memory import MemoryRecord, MemoryType, MemoryScope, MemoryQuery
@@ -89,6 +89,42 @@ class MemoryManager:
 
         self.store.save_memory(record)
         return record
+
+    def write_memory(
+        self,
+        agent_id: str,
+        memory_type: Any,
+        content: str,
+        scope: Any = MemoryScope.GLOBAL,
+        scope_value: Optional[str] = None,
+        basis_refs: Optional[List[str]] = None,
+        confidence: float = 1.0,
+        run_no: int = 1,
+    ) -> MemoryRecord:
+        """
+        Convenience wrapper supporting string or enum memory_type and scope.
+        """
+        if isinstance(memory_type, str):
+            try:
+                memory_type = MemoryType(memory_type)
+            except Exception:
+                memory_type = MemoryType.SOURCE_LESSON
+        if isinstance(scope, str):
+            try:
+                scope = MemoryScope(scope)
+            except Exception:
+                scope = MemoryScope.GLOBAL
+
+        return self.record_lesson(
+            agent_id=agent_id,
+            memory_type=memory_type,
+            content=content,
+            scope=scope,
+            scope_value=scope_value,
+            basis_refs=basis_refs,
+            confidence=confidence,
+            run_no=run_no,
+        )
 
 
 _memory_manager: Optional[MemoryManager] = None

@@ -165,7 +165,7 @@ class AgentToolRegistry:
             event_id=kwargs.get("event_id"),
             country=kwargs.get("country"),
             sector=kwargs.get("sector"),
-            limit=kwargs.get("limit", 5),
+            top_k=kwargs.get("limit", kwargs.get("top_k", 5)),
         )
         return self.memory_manager.retrieve_relevant_memories(query)
 

@@ -114,20 +114,36 @@ class ThorAgent(BaseAgent):
         for m in memories:
             content = getattr(m, "content", "")
             applied_memory_notes.append(content)
-            # Memory-driven behavior adjustment:
+            # Memory-driven behavior adjustment (Acceptance Check 9):
             if "avoid tier 4" in content.lower() or "reject tier 4" in content.lower():
                 max_tier_filter = 3
+                mem_id = getattr(m, "id", "MEM-THOR-SEED-01")
                 self.log_trial_event(
                     case_id=case.case_id,
                     event_type="query_changed_by_memory",
                     run_no=current_run.run_no,
                     details={
                         "agent": "thor",
-                        "memory_id": getattr(m, "id", "mem_thor"),
+                        "memory_id": mem_id,
                         "reason": "Restricted search tier ceiling to Tier 3 based on prior judicial lesson.",
                         "new_max_tier": 3,
                     },
                 )
+                try:
+                    from src.memory.logger import MemoryAuditLogger
+                    MemoryAuditLogger().log_query_changed_by_memory(
+                        case_id=case.case_id,
+                        run_no=current_run.run_no,
+                        agent_id="thor",
+                        memory_id=mem_id,
+                        previous_query=case.question,
+                        new_query=f"{case.question} [filter: max_tier=3]",
+                        previous_filters={"max_tier": 4},
+                        new_filters={"max_tier": 3},
+                        reason="Restricted search tier ceiling to Tier 3 based on prior judicial lesson.",
+                    )
+                except Exception:
+                    pass
 
         memory_context = (
             "\n".join([f"- {note}" for note in applied_memory_notes])
