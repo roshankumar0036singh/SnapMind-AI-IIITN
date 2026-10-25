@@ -273,12 +273,55 @@ async def run_trial_pipeline(
 
     completed_case = await run_thor_and_loki_debate(case)
 
+    # Step 5: Phase 3 Supreme Judicial Review (Odin)
+    print_banner("PHASE 3: SUPREME JUDICIAL ADJUDICATION -- ODIN THE ALLFATHER")
+    print("Odin evaluating all debate claims, verifying citations, classifying findings, and compiling briefing...")
+
+    from src.agents.odin.agent import OdinJudge
+    odin = OdinJudge()
+    completed_case, judicial_output = odin.evaluate_case(completed_case)
+
+    run1 = completed_case.runs[0]
+    print_section("ODIN'S VERDICT & FINDINGS")
+    print(f"Total Claims Adjudicated : {len(run1.rulings)}")
+    for r in run1.rulings:
+        print(f"  * Ruling on {r.claim_id}: [{r.outcome.value.upper()}] ({r.basis.value}) - {r.reasoning}")
+
+    if run1.classification:
+        print(f"\nClassification:")
+        print(f"  * Established: {run1.classification.established_claims}")
+        print(f"  * Contested  : {run1.classification.contested_claims}")
+        print(f"  * Conceded   : {run1.classification.conceded_claims}")
+
+    if run1.ranges:
+        print(f"\nCalibrated Exposure Ranges:")
+        for rng in run1.ranges:
+            print(f"  * {rng.country.upper()} / {rng.sector.upper()}: Odin [{rng.odin_low}%, {rng.odin_high}%] (Thor: [{rng.thor_low}, {rng.thor_high}], Loki: [{rng.loki_low}, {rng.loki_high}])")
+
+    if run1.sufficiency:
+        print(f"\nSufficiency Evaluation: [{run1.sufficiency.status.upper()}]")
+        if run1.sufficiency.missing:
+            print(f"  * Missing Categories: {run1.sufficiency.missing}")
+
+    if completed_case.final_briefing:
+        print_banner("ODIN'S FINAL EXECUTIVE BRIEFING (OKF FORMAT)")
+        print(completed_case.final_briefing)
+
+    # Synchronize completed case to Supabase
+    try:
+        from src.tools.heimdall_tools import post_to_case_file
+        post_to_case_file(case_id=case_id, section="briefing", payload={"final_briefing": completed_case.final_briefing})
+        post_to_case_file(case_id=case_id, section="status", payload=str(completed_case.status))
+    except Exception:
+        pass
+
     return {
         "case_id": case_id,
-        "status": "completed",
+        "status": str(completed_case.status),
         "verdict": verdict_str,
         "confidence": confidence,
         "reasons": reasons,
         "wake_next": wake_next,
         "case_file": completed_case,
+        "judicial_output": judicial_output,
     }

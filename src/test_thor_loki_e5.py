@@ -19,6 +19,9 @@ import os
 import sys
 from datetime import date
 
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 # Ensure clean UTF-8 output on Windows terminal
 if sys.platform == "win32":
     try:
@@ -181,11 +184,35 @@ async def run_e5_trial():
         if d.new_refs:
             print(f"  New Refs   : {d.new_refs}")
 
-    print_banner("TRIAL STAGE COMPLETE: READY FOR ODIN JUDICIAL EVALUATION")
+    print_banner("TRIAL STAGE COMPLETE: EXECUTING ODIN JUDICIAL EVALUATION")
     print(f"Total Claims on Blackboard : {len(current_run.claims)} (Thor: {len(thor_claims)}, Loki: {len(loki_claims)})")
     print(f"Total Attacks on Blackboard: {len(current_run.attacks)} (Thor: {len(thor_attacks)}, Loki: {len(loki_attacks)})")
     print(f"Total Defences Recorded    : {len(current_run.defences)}")
     print("All citations strictly grounded in Supabase runemark_documents and pre-cutoff clock (2027-01-25).")
+
+    # -------------------------------------------------------------
+    # Step 5: Odin Judicial Review & Executive Briefing
+    # -------------------------------------------------------------
+    print_banner("PHASE 5: SUPREME JUDICIAL ADJUDICATION -- ODIN THE ALLFATHER")
+    from src.agents.odin.agent import OdinJudge
+    odin = OdinJudge()
+    case, judicial_output = odin.evaluate_case(case)
+
+    run = case.runs[0]
+    print_section("ODIN'S JUDICIAL RULINGS")
+    for r in run.rulings:
+        print(f"  * [{r.outcome.value.upper()}] ({r.basis.value}) on {r.claim_id}: {r.reasoning}")
+
+    if run.ranges:
+        print("\nCalibrated Exposure Ranges:")
+        for rng in run.ranges:
+            print(f"  * {rng.country.upper()} / {rng.sector.upper()}: Odin [{rng.odin_low}%, {rng.odin_high}%] (Thor: [{rng.thor_low}, {rng.thor_high}], Loki: [{rng.loki_low}, {rng.loki_high}])")
+
+    if case.final_briefing:
+        print_banner("ODIN EXECUTIVE BRIEFING (OKF FORMAT)")
+        print(case.final_briefing)
+
+    print_banner("ALL 4 AGENTS SUCCESSFULLY EXECUTED & INTEGRATED!")
 
 
 if __name__ == "__main__":

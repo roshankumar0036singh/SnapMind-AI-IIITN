@@ -191,6 +191,10 @@ class LokiAgent(BaseAgent):
                 c.run_no = current_run.run_no
                 c.round_no = 1
                 c.status = "submitted"
+                if target_country and c.country.lower() not in [x.lower() for x in scope_info.get("countries", [])]:
+                    c.country = target_country
+                if target_sector and c.sector.lower() not in [x.lower() for x in scope_info.get("sectors", [])]:
+                    c.sector = target_sector
                 if not c.claim_id:
                     c.claim_id = f"CLM-LOKI-R{current_run.run_no}-{idx+1:02d}"
 

@@ -81,23 +81,31 @@ class BaseAgent(ABC):
         import time
         from google.genai.errors import ServerError, ClientError
 
-        # Model hierarchy: User defined -> gemini-3.5-flash-lite -> gemini-3.6-flash -> gemini-2.5-flash
-        models_to_try = [
-            self.model_name,
-            "gemini-3.5-flash-lite",
-            settings.GEMINI_FALLBACK_MODEL or "gemini-3.6-flash",
-            "gemini-3.6-flash",
-            "gemini-2.5-flash",
-        ]
-        # Deduplicate while preserving order
+        # Use ONLY the model configured in .env (and optional fallback model if configured)
         unique_models = []
-        for m in models_to_try:
-            if m and m not in unique_models:
-                unique_models.append(m)
+        if settings.GEMINI_MODEL:
+            unique_models.append(settings.GEMINI_MODEL)
+        if settings.GEMINI_FALLBACK_MODEL and settings.GEMINI_FALLBACK_MODEL not in unique_models:
+            unique_models.append(settings.GEMINI_FALLBACK_MODEL)
+        if not unique_models:
+            unique_models.append(self.model_name)
+
+        # Helper to strip 'default' keys from JSON Schema (Gemini API disallows 'default' in response schema)
+        def _strip_defaults(schema_dict: Any) -> Any:
+            if isinstance(schema_dict, dict):
+                return {k: _strip_defaults(v) for k, v in schema_dict.items() if k != "default"}
+            elif isinstance(schema_dict, list):
+                return [_strip_defaults(i) for i in schema_dict]
+            return schema_dict
+
+        if hasattr(response_schema, "model_json_schema"):
+            clean_schema = _strip_defaults(response_schema.model_json_schema())
+        else:
+            clean_schema = response_schema
 
         config = {
             "response_mime_type": "application/json",
-            "response_schema": response_schema,
+            "response_schema": clean_schema,
             "temperature": temperature,
             "system_instruction": system_prompt,
         }
@@ -112,13 +120,19 @@ class BaseAgent(ABC):
                         config=config,
                     )
                     if response.parsed is not None:
-                        return response.parsed
+                        if isinstance(response.parsed, response_schema):
+                            return response.parsed
+                        elif isinstance(response.parsed, dict):
+                            return response_schema.model_validate(response.parsed)
+                        elif isinstance(response.parsed, list) and hasattr(response_schema, "__root__"):
+                            return response_schema.model_validate(response.parsed)
                     elif response.text:
-                        # Attempt to parse json directly if response.parsed was None
                         import json
                         clean_text = response.text.strip()
                         if clean_text.startswith("```json"):
                             clean_text = clean_text[7:]
+                        if clean_text.startswith("```"):
+                            clean_text = clean_text[3:]
                         if clean_text.endswith("```"):
                             clean_text = clean_text[:-3]
                         parsed_dict = json.loads(clean_text)
@@ -126,7 +140,6 @@ class BaseAgent(ABC):
                 except (ServerError, ClientError) as e:
                     last_err = e
                     status_code = getattr(e, "code", 500)
-                    # Retry on 503 (Unavailable) or 429 (Resource Exhausted)
                     if "503" in str(e) or "429" in str(e) or status_code in (503, 429):
                         wait_sec = (attempt + 1) * 2
                         print(f"[{self.agent_id.upper()}] Gemini {current_model} busy ({e}). Retrying in {wait_sec}s...")
