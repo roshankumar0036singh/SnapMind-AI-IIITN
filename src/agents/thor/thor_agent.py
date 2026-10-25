@@ -9,8 +9,11 @@ Deterministic wake conditions, autonomous Supabase retrieval, Gemini structured 
 from __future__ import annotations
 
 import json
+import logging
 from typing import Any, Dict, List
 from pydantic import BaseModel, Field
+
+logger = logging.getLogger(__name__)
 
 from src.agents.base import BaseAgent
 from src.agents.prompts.thor_prompts import (
@@ -132,19 +135,22 @@ class ThorAgent(BaseAgent):
             else "No relevant prior memory lessons."
         )
 
+        countries_in_scope = scope_info.get("countries") or [target_country]
+        sectors_in_scope = scope_info.get("sectors") or [target_sector]
+
         # -------------------------------------------------------------
         # ROUND 1: GATHER HIGH-EXPOSURE EVIDENCE & SUBMIT CLAIMS
         # -------------------------------------------------------------
         if len(thor_claims) == 0:
-            # 2. Autonomous search via Supabase & Gemini embeddings
+            # 2. Autonomous search via Supabase & Gemini embeddings across all target countries
             retrieved_docs = self.tools_binding.gather_high_exposure_evidence(
                 question=case.question,
                 as_of_date=as_of_date,
-                country=target_country,
-                sector=target_sector,
+                country=", ".join(countries_in_scope),
+                sector=", ".join(sectors_in_scope),
                 event_id=event_id,
                 max_tier=max_tier_filter,
-                top_k=6,
+                top_k=8,
             )
 
             # 3. Autonomous trade table decline calculations
@@ -160,6 +166,27 @@ class ThorAgent(BaseAgent):
                 f"'{d.title}'\nExcerpt: {d.text}"
                 for d in retrieved_docs
             ]) if retrieved_docs else "No direct document evidence retrieved from database."
+
+            # Inject Dual-Level Knowledge Graph Intelligence across all scope countries
+            try:
+                from src.retrieval.graph_retriever import get_graph_retriever
+                retriever = get_graph_retriever()
+                graph_blocks = []
+                for c_name in countries_in_scope:
+                    for s_name in sectors_in_scope:
+                        ctx = retriever.format_graph_context_for_agent(
+                            agent_role="thor",
+                            country=c_name,
+                            sector=s_name,
+                            as_of_date=as_of_date,
+                        )
+                        if ctx and ctx not in graph_blocks:
+                            graph_blocks.append(ctx)
+                if graph_blocks:
+                    graph_context = "\n\n".join(graph_blocks)
+                    docs_text = f"{graph_context}\n\n### DOCUMENT EXHIBITS:\n{docs_text}"
+            except Exception as e:
+                logger.warning(f"[ThorAgent] Knowledge Graph retrieval skipped: {e}")
 
             trade_text = "\n\n".join([
                 f"Table {t.get('table_id')}: Baseline Avg = {t.get('baseline_average')}, "
@@ -233,6 +260,27 @@ class ThorAgent(BaseAgent):
             f"[{d.chunk_id or d.doc_id}] (Tier {d.reliability_tier}): {d.title}\n{d.text}"
             for d in new_counter_docs
         ]) if new_counter_docs else "No additional counter-evidence retrieved."
+
+        # Inject Knowledge Graph transit bottlenecks to empower cross-examination attacks across all scope countries
+        try:
+            from src.retrieval.graph_retriever import get_graph_retriever
+            retriever = get_graph_retriever()
+            graph_r2_blocks = []
+            for c_name in countries_in_scope:
+                for s_name in sectors_in_scope:
+                    ctx = retriever.format_graph_context_for_agent(
+                        agent_role="thor",
+                        country=c_name,
+                        sector=s_name,
+                        as_of_date=as_of_date,
+                    )
+                    if ctx and ctx not in graph_r2_blocks:
+                        graph_r2_blocks.append(ctx)
+            if graph_r2_blocks:
+                graph_r2_context = "\n\n".join(graph_r2_blocks)
+                new_docs_text = f"{graph_r2_context}\n\n### RETRIEVED COUNTER-DOCUMENTS:\n{new_docs_text}"
+        except Exception as e:
+            logger.warning(f"[ThorAgent] Knowledge Graph R2 retrieval skipped: {e}")
 
         opponent_claims_json = [c.model_dump(mode="json") for c in loki_claims]
         opponent_attacks_json = [a.model_dump(mode="json") for a in loki_attacks]

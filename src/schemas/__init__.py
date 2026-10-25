@@ -66,8 +66,25 @@ from src.schemas.debate import (
     DebatePhase,
     DebateTurnRecord,
 )
+from src.schemas.graph import (
+    EntityType,
+    RelationType,
+    GraphNode,
+    GraphEdge,
+    GraphTriplet,
+    GraphPath,
+    SubgraphResult,
+)
 
 __all__ = [
+    # Graph
+    "EntityType",
+    "RelationType",
+    "GraphNode",
+    "GraphEdge",
+    "GraphTriplet",
+    "GraphPath",
+    "SubgraphResult",
     # Ingest
     "DocumentMetadata",
     "DocumentDamageReport",
