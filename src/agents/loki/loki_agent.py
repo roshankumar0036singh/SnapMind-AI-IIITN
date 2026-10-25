@@ -158,7 +158,29 @@ class LokiAgent(BaseAgent):
         # ROUND 1: GATHER RESILIENCE EVIDENCE & SUBMIT CLAIMS
         # -------------------------------------------------------------
         if len(loki_claims) == 0:
-            # 2. Autonomous search via Supabase & Gemini embeddings across all target countries
+            # 1b. Shared Baseline Case Dossier (prepared by Heimdall)
+            dossier_entries = []
+            raw_dossier = current_run.evidence_index or []
+            if not raw_dossier and len(case.runs) > 1:
+                raw_dossier = case.runs[0].evidence_index or []
+
+            for entry in raw_dossier:
+                if hasattr(entry, "doc_id"):
+                    dossier_entries.append(
+                        f"[{entry.doc_id or entry.ref}] (Tier {entry.tier}, Date: {entry.date}, Usable: {entry.usable}): "
+                        f"'{entry.title}'\nSummary: {entry.summary}"
+                    )
+                elif isinstance(entry, dict):
+                    dossier_entries.append(
+                        f"[{entry.get('doc_id') or entry.get('ref')}] (Tier {entry.get('tier', 'T3')}, Date: {entry.get('date')}, Usable: {entry.get('usable', True)}): "
+                        f"'{entry.get('title', '')}'\nSummary: {entry.get('summary', '')}"
+                    )
+                elif isinstance(entry, str):
+                    dossier_entries.append(f"[{entry}]")
+
+            dossier_text = "\n\n".join(dossier_entries) if dossier_entries else "No shared dossier provided by Heimdall."
+
+            # 2. Autonomous search via Supabase & Gemini embeddings across all target countries (Criterion 3)
             retrieved_docs = self.tools_binding.gather_resilience_evidence(
                 question=case.question,
                 as_of_date=as_of_date,
@@ -200,9 +222,17 @@ class LokiAgent(BaseAgent):
                             graph_blocks.append(ctx)
                 if graph_blocks:
                     graph_context = "\n\n".join(graph_blocks)
-                    docs_text = f"{graph_context}\n\n### DOCUMENT EXHIBITS:\n{docs_text}"
+                    docs_text = f"{graph_context}\n\n### SPECIALIZED RESILIENCE RETRIEVAL:\n{docs_text}"
             except Exception as e:
                 logger.warning(f"[LokiAgent] Knowledge Graph retrieval skipped: {e}")
+
+            # Combine Section 1 (Heimdall Baseline Dossier) and Section 2 (Loki Specialized Retrieval)
+            combined_evidence_text = (
+                f"=== SECTION 1: HEIMDALL SHARED CASE DOSSIER (VETTED PRE-CUTOFF BASELINE) ===\n"
+                f"{dossier_text}\n\n"
+                f"=== SECTION 2: LOKI'S SPECIALIZED RESILIENCE RETRIEVAL (BUFFER, ROUTE & SUBSTITUTION ANGLES) ===\n"
+                f"{docs_text}"
+            )
 
             trade_text = "\n\n".join([
                 f"Table {t.get('table_id')}: Baseline Avg = {t.get('baseline_average')}, "
@@ -215,7 +245,7 @@ class LokiAgent(BaseAgent):
                 question=case.question,
                 as_of=str(as_of_date),
                 scope=json.dumps(scope_info, default=str),
-                evidence_text=docs_text,
+                evidence_text=combined_evidence_text,
                 trade_text=trade_text,
                 memory_context=memory_context,
             )

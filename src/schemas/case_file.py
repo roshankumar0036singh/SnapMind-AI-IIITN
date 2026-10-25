@@ -9,7 +9,7 @@ from __future__ import annotations
 import uuid
 from datetime import date, datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 from pydantic import BaseModel, Field, field_validator
 
 from src.schemas.ingest import IngestReport
@@ -54,13 +54,41 @@ class VerificationVerdict(BaseModel):
     message_to_user: str
 
 
+class EvidenceIndexEntry(BaseModel):
+    entry_id: str = Field(default_factory=lambda: str(uuid.uuid4())[:8])
+    doc_id: Optional[str] = None
+    title: str = ""
+    source: str = ""
+    tier: str = "T4"
+    date: Optional[Any] = None
+    event_id: Optional[str] = None
+    topic: str = ""
+    summary: str = ""
+    exact_quote: str = ""
+    ref: Optional[str] = None
+    chunk_id: Optional[str] = None
+    table_id: Optional[str] = None
+    usable: bool = True
+    reliability_weight: float = 0.5
+    quarantine_reason: Optional[str] = None
+    warnings: List[str] = Field(default_factory=list)
+    tags: List[str] = Field(default_factory=list)
+
+    @field_validator("reliability_weight")
+    @classmethod
+    def _validate_weight(cls, v: float) -> float:
+        if not 0.0 <= v <= 1.0:
+            raise ValueError("reliability_weight must be between 0.0 and 1.0")
+        return v
+
+
 class RunRecord(BaseModel):
     """
     Snapshot of an individual trial run.
     The convergence loop may accumulate multiple cycles in a single RunRecord.
     """
     run_no: int = Field(default=1, ge=1)
-    evidence_index: List[str] = Field(default_factory=list)
+    evidence_index: List[Union[EvidenceIndexEntry, Dict[str, Any], str]] = Field(default_factory=list)
     side_status: Dict[str, str] = Field(default_factory=lambda: {"thor": "active", "loki": "active"})
     claims: List[Claim] = Field(default_factory=list)
     attacks: List[Attack] = Field(default_factory=list)
@@ -202,34 +230,6 @@ class TradeTableIssue(BaseModel):
     table_id: str
     issue_type: str
     details: str
-
-
-class EvidenceIndexEntry(BaseModel):
-    entry_id: str = Field(default_factory=lambda: str(uuid.uuid4())[:8])
-    doc_id: Optional[str] = None
-    title: str = ""
-    source: str = ""
-    tier: str = "T4"
-    date: Optional[Any] = None
-    event_id: Optional[str] = None
-    topic: str = ""
-    summary: str = ""
-    exact_quote: str = ""
-    ref: Optional[str] = None
-    chunk_id: Optional[str] = None
-    table_id: Optional[str] = None
-    usable: bool = True
-    reliability_weight: float = 0.5
-    quarantine_reason: Optional[str] = None
-    warnings: List[str] = Field(default_factory=list)
-    tags: List[str] = Field(default_factory=list)
-
-    @field_validator("reliability_weight")
-    @classmethod
-    def _validate_weight(cls, v: float) -> float:
-        if not 0.0 <= v <= 1.0:
-            raise ValueError("reliability_weight must be between 0.0 and 1.0")
-        return v
 
 
 class MemoryAction(BaseModel):
