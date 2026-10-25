@@ -58,15 +58,18 @@ class SupabaseDocumentLoader:
             damage = rec["damage_report"]
             body = rec["body_text"]
 
+            clean_title = (meta["title"] or "").replace("\x00", "")
+            clean_body = (body or "").replace("\x00", "")
+
             # Document text for embedding includes title and body
-            embed_text = f"{meta['title']}\n\n{body}"
+            embed_text = f"{clean_title}\n\n{clean_body}"
             texts_to_embed.append(embed_text)
             doc_indices.append(idx)
 
             row = {
                 "doc_id": meta["doc_id"],
-                "title": meta["title"],
-                "content": body,
+                "title": clean_title,
+                "content": clean_body,
                 "country": meta["country"],
                 "sector": meta["sector"],
                 "event_id": meta["event_id"],
@@ -84,6 +87,8 @@ class SupabaseDocumentLoader:
                 "is_injection_attempt": damage.get("is_injection_attempt", False),
                 "embedding": None,
             }
+            # PostgreSQL does not allow \x00 null characters in text fields
+            row = {k: v.replace("\x00", "") if isinstance(v, str) else v for k, v in row.items()}
             rows_to_upsert.append(row)
 
         # Generate Gemini embeddings if requested and client available

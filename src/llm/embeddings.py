@@ -8,15 +8,16 @@ from src.config import get_settings
 
 class GeminiEmbeddingClient:
     """
-    Client for generating 768-dimensional dense vectors using Gemini text-embedding-004.
+    Client for generating 768-dimensional dense vectors using Gemini embedding models.
     Matches Supabase vector(768) column specification in supabase_schema.sql.
     """
-    MODEL_NAME = "text-embedding-004"
+    DEFAULT_MODEL = "gemini-embedding-001"
     DIMENSION = 768
 
-    def __init__(self, api_key: Optional[str] = None):
+    def __init__(self, api_key: Optional[str] = None, model_name: Optional[str] = None):
         settings = get_settings()
         self.api_key = api_key or settings.GEMINI_API_KEY or os.getenv("GEMINI_API_KEY")
+        self.model_name = model_name or os.getenv("GEMINI_EMBEDDING_MODEL", self.DEFAULT_MODEL)
         if not self.api_key:
             self._client = None
         else:
@@ -41,7 +42,7 @@ class GeminiEmbeddingClient:
             return [0.0] * self.DIMENSION
 
         response = self.client.models.embed_content(
-            model=self.MODEL_NAME,
+            model=self.model_name,
             contents=cleaned,
             config=types.EmbedContentConfig(output_dimensionality=self.DIMENSION),
         )
@@ -58,7 +59,7 @@ class GeminiEmbeddingClient:
             chunk = texts[i : i + batch_size]
             cleaned_chunk = [t.strip() if t.strip() else " " for t in chunk]
             response = self.client.models.embed_content(
-                model=self.MODEL_NAME,
+                model=self.model_name,
                 contents=cleaned_chunk,
                 config=types.EmbedContentConfig(output_dimensionality=self.DIMENSION),
             )
