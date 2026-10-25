@@ -115,8 +115,6 @@ def ingest_event_pack(
                                     "month": r.month.isoformat() if r.month else None,
                                     "value": r.value,
                                     "volume": r.volume,
-                                    "status": r.row_status,
-                                    "flag_reason": r.flag_reason,
                                 })
 
                         if rows_payload:

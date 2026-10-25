@@ -449,6 +449,7 @@ def run_heimdall(
     # Initial evidence retrieval
     initial_docs_context = ""
     docs: List[Dict[str, Any]] = []
+    new_found_docs: List[Dict[str, Any]] = []
     try:
         docs = search_docs(
             query=question[:200],
@@ -456,6 +457,22 @@ def run_heimdall(
             event_id=event_id,
             top_k=8,
         )
+
+        # Targeted expansion for Odin send-back missing categories
+        if send_back_categories:
+            for cat in send_back_categories:
+                cat_query = f"{question[:120]} {cat}"
+                cat_docs = search_docs(
+                    query=cat_query,
+                    as_of=as_of,
+                    event_id=event_id,
+                    top_k=4,
+                )
+                for cd in cat_docs:
+                    if not any(d.get("doc_id") == cd.get("doc_id") for d in docs):
+                        docs.append(cd)
+                        new_found_docs.append(cd)
+
         if docs:
             initial_docs_context = "\n\nRETRIEVED CORPUS DOCUMENTS (evidence candidates):\n"
             for d in docs:
@@ -762,6 +779,11 @@ def run_heimdall(
         ))
 
     output.evidence_index = compiled_index
+    if send_back_categories and new_found_docs:
+        new_ids = {d.get("doc_id") for d in new_found_docs if d.get("doc_id")}
+        output.new_evidence = [e for e in compiled_index if e.doc_id in new_ids]
+    elif run_no > 1:
+        output.new_evidence = compiled_index
 
     # 4d. Enforce as-of date on scope
     if as_of and output.scope.as_of and output.scope.as_of > as_of:

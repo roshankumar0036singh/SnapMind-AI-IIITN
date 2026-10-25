@@ -60,9 +60,14 @@ def run_heimdall(*args, **kwargs) -> Any:
     """
     if "case" in kwargs:
         c = kwargs["case"]
-        missing_cats = []
-        if c.runs:
-            missing_cats = getattr(c.runs[-1], "missing", []) or []
+        missing_cats = kwargs.get("send_back_categories")
+        if not missing_cats and c.runs:
+            for r in reversed(c.runs):
+                cats = getattr(r, "missing", None)
+                if cats:
+                    missing_cats = cats
+                    break
+        missing_cats = missing_cats or []
         event_id = c.scope.event_id if c.scope else None
         as_of_str = str(c.as_of) if c.as_of else ""
         return _real_run_heimdall(
@@ -620,7 +625,73 @@ def run_convergence_debate(case: CaseFile) -> CaseFile:
         print_section(f"EVIDENCE RUN {run_no}")
 
         # 1. Wake Heimdall for evidence gathering
-        heimdall_res = run_heimdall(case=case, run_no=run_no)
+        send_back_cats = None
+        if run_no > 1 and len(case.runs) > 1:
+            for r in reversed(case.runs[:-1]):
+                if getattr(r, "missing", None):
+                    send_back_cats = r.missing
+                    break
+
+        heimdall_res = run_heimdall(
+            case=case,
+            run_no=run_no,
+            send_back_categories=send_back_cats,
+        )
+
+        # Bridge Heimdall's gathered evidence dossier to the shared blackboard RunRecord
+        # On send-back runs (run_no > 1), MERGE previous dossier + new evidence
+        # so Thor & Loki never lose access to Run 1 baseline documents.
+        current_run = case.runs[-1]
+
+        # Collect new evidence from Heimdall response
+        new_evidence_items = []
+        if hasattr(heimdall_res, "evidence_index") and heimdall_res.evidence_index:
+            new_evidence_items = list(heimdall_res.evidence_index)
+        elif isinstance(heimdall_res, dict):
+            if heimdall_res.get("evidence_index"):
+                new_evidence_items = list(heimdall_res["evidence_index"])
+            elif heimdall_res.get("new_evidence"):
+                new_evidence_items = list(heimdall_res["new_evidence"])
+
+        if run_no > 1 and len(case.runs) > 1:
+            # Carry forward all evidence from the previous run's dossier
+            prev_run = case.runs[-2]
+            prior_evidence = list(prev_run.evidence_index) if prev_run.evidence_index else []
+
+            # Deduplicate by doc_id: new items override old ones with same doc_id
+            def _get_doc_id(entry):
+                if hasattr(entry, "doc_id"):
+                    return entry.doc_id
+                elif isinstance(entry, dict):
+                    return entry.get("doc_id")
+                return str(entry)
+
+            existing_ids = set()
+            merged = []
+            # Add new items first (they may have updated tier/weight)
+            for item in new_evidence_items:
+                did = _get_doc_id(item)
+                if did and did not in existing_ids:
+                    existing_ids.add(did)
+                    merged.append(item)
+            # Then carry forward prior items not already present
+            for item in prior_evidence:
+                did = _get_doc_id(item)
+                if did and did not in existing_ids:
+                    existing_ids.add(did)
+                    merged.append(item)
+
+            current_run.evidence_index = merged
+            print(
+                f"  [Workflow] Send-back merge: {len(new_evidence_items)} new + "
+                f"{len(prior_evidence)} prior = {len(merged)} total evidence items for Run {run_no}."
+            )
+        else:
+            current_run.evidence_index = new_evidence_items
+            print(
+                f"  [Workflow] Heimdall populated Case Dossier with "
+                f"{len(current_run.evidence_index)} verified evidence item(s) for Run {run_no}."
+            )
 
         # 2. Run debate agents (Thor & Loki)
         debate_res = run_debate_agents(case=case, run_no=run_no)
@@ -641,11 +712,21 @@ def run_convergence_debate(case: CaseFile) -> CaseFile:
             missing = odin_res.get("missing", [])
             odin_termination = odin_res.get("termination")
         elif isinstance(odin_res, tuple):
-            c_case, _ = odin_res
-            if c_case.runs:
-                last_run = c_case.runs[-1]
+            updated_case, result_dict = odin_res
+            # Odin returns the mutated CaseFile — sync it back so rulings/
+            # classification/briefing are not lost.
+            if hasattr(updated_case, "runs") and updated_case.runs:
+                case.runs = updated_case.runs
+                last_run = case.runs[-1]
                 sufficiency = last_run.sufficiency
                 missing = last_run.missing
+            if updated_case.final_briefing:
+                case.final_briefing = updated_case.final_briefing
+            if updated_case.status != CaseStatus.OPEN:
+                case.status = updated_case.status
+            if isinstance(result_dict, dict):
+                sufficiency = result_dict.get("sufficiency", sufficiency)
+                missing = result_dict.get("missing", missing)
         elif hasattr(odin_res, "runs") and odin_res.runs:
             last_run = odin_res.runs[-1]
             sufficiency = last_run.sufficiency
