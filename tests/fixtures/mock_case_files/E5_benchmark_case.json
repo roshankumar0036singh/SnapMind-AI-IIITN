@@ -1,0 +1,9 @@
+{
+  "event_id": "E5",
+  "as_of": "2027-01-25",
+  "question": "As of 25 January 2027, how exposed are Midgard and Tolan to the end of the Orvan corridor agreement? Give a low and high range for wheat and maize imports.",
+  "target_countries": ["Midgard", "Tolan"],
+  "target_sectors": ["Wheat", "Maize"],
+  "corridor": "Orvan corridor agreement",
+  "pack": "dev_pack_E5"
+}

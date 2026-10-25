@@ -1,0 +1,41 @@
+DOC_ID: ORV-0027
+EVENT_ID: E5
+TITLE: Trade note: Vanir to Midgard, wheat, July to December 2026
+SOURCE_NAME: Realm Trade Ministry
+SOURCE_TYPE: trade_note
+RELIABILITY: 1
+PUB_DATE: 2027-01-22
+PUB_TIME: 09:05
+COUNTRY: Midgard
+SECTOR: Wheat
+LANGUAGE: en
+---
+Trade note: Vanir to Midgard, wheat, July to December 2026
+
+[P1] Route: Vanir to Midgard, wheat.
+
+[P2] In July 2026, the value was USD 30.0M and the volume was 80,000 tonnes.
+
+[P3] In August 2026, the value was USD 32.2M and the volume was 86,000 tonnes.
+
+[P4] In September 2026, the value was USD 31.5M and the volume was 84,000 tonnes.
+
+[P5] In October 2026, the value was USD 30.9M and the volume was 77,000 tonnes.
+
+[P6] In November 2026, the value was USD 38.5M and the volume was 96,000 tonnes.
+
+[P7] In December 2026, the value was USD 36.9M and the volume was 92,000 tonnes.
+
+[P8] In July 2025, the value was USD 31.5M and the volume was 84,000 tonnes.
+
+[P9] In August 2025, the value was USD 33.8M and the volume was 90,000 tonnes.
+
+[P10] In September 2025, the value was USD 32.6M and the volume was 87,000 tonnes.
+
+[P11] In October 2025, the value was USD 28.9M and the volume was 77,000 tonnes.
+
+[P12] In November 2025, the value was USD 29.6M and the volume was 79,000 tonnes.
+
+[P13] In December 2025, the value was USD 28.1M and the volume was 75,000 tonnes.
+
+[P14] Vanir wheat reached Midgard in larger volumes from November, mostly on short-term contracts.

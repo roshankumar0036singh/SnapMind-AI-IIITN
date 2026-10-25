@@ -1,0 +1,21 @@
+DOC_ID: ATL-0002
+EVENT_ID: NONE
+TITLE: Country profile: Asgard
+SOURCE_NAME: Realm Trade Ministry
+SOURCE_TYPE: atlas
+RELIABILITY: 1
+PUB_DATE: 2024-01-15
+PUB_TIME: 09:00
+COUNTRY: Asgard
+SECTOR: general
+LANGUAGE: en
+---
+Country profile: Asgard
+
+[P1] Asgard is a small strait state and trade hub on the Inner Sea. Its economy depends on shipping services, warehouse work, pilotage and re-exports rather than on large-scale manufacturing. The capital is also the main administrative centre for the strait approaches.
+
+[P2] Asgard exports shipping and re-export services and imports almost everything it consumes, from food and medicines to machinery and household goods. Most cargo arrives by sea and is sorted at Asgard Port before moving onward by coastal vessel or road.
+
+[P3] The main port is Asgard Port, a hub with container, general cargo and passenger berths. The best-known firms are Longship Lines, a container carrier, and Shield Insurance, a marine insurer. Both serve regional clients and are headquartered in the capital.
+
+[P4] Ferry links connect the capital to smaller islands, and a coastal road runs west towards the Ymir road. The port operates throughout the year, with extra staff during the summer months.

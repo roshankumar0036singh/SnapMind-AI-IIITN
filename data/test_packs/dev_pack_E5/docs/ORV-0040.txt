@@ -1,0 +1,27 @@
+DOC_ID: ORV-0040
+EVENT_ID: E5
+TITLE: Millers look beyond Orvan as wheat cargoes slip
+SOURCE_NAME: Midgard Times
+SOURCE_TYPE: news
+RELIABILITY: 2
+PUB_DATE: 2026-10-08
+PUB_TIME: 08:45
+COUNTRY: Midgard
+SECTOR: Wheat
+LANGUAGE: en
+---
+Millers look beyond Orvan as wheat cargoes slip
+
+[P1] By Lena Sorn. Midgard's flour millers are booking wheat from Vanir and asking for more rail capacity from Ravik after Orvan's sea loadings fell in September.
+
+[P2] The Realm Trade Ministry put the September port index at 40, against an old normal of 100.
+
+[P3] Midgard buyers had expected the corridor agreement to be renewed. It expired on 10 September without a replacement.
+
+[P4] "We can replace some of the lost wheat, not all of it," said a purchasing manager at a Midgard mill. The company asked not to be named.
+
+[P5] The shift is visible in the paperwork as much as in the prices. Millers that once booked a single large Orvan cargo are now splitting orders between smaller Vanir parcels and rail deliveries through Ravik. Each substitute carries its own quality test and its own delivery risk, which adds work for the buying desks. The millers say the arrangement is workable for now but leaves them with less room to absorb a second disruption. The ministry has not changed its guidance on stock levels.
+
+[P6] The millers' buying desks say the hardest part is not the price but the timing. A rail parcel can arrive in days, while a sea cargo takes weeks to arrange. That makes planning harder and ties up more working capital. The mills have asked the ministry for a clearer picture of rail capacity.
+
+[P7] Vanir wheat offers have been small and priced above Orvan's usual terms.

@@ -1,0 +1,21 @@
+DOC_ID: ATL-0005
+EVENT_ID: NONE
+TITLE: Country profile: Ymir
+SOURCE_NAME: Realm Trade Ministry
+SOURCE_TYPE: atlas
+RELIABILITY: 1
+PUB_DATE: 2024-01-15
+PUB_TIME: 09:30
+COUNTRY: Ymir
+SECTOR: general
+LANGUAGE: en
+---
+Country profile: Ymir
+
+[P1] Ymir hosts the canal that links the West Sea and the East Sea. The country is small and its economy is built around transit, pilotage, maintenance and port services rather than around agriculture or heavy industry.
+
+[P2] Ymir earns most of its income from transit and port services. It imports food and fuel, and its own exports are limited. The canal is managed by the Ymir Canal Authority, which publishes schedules and operating notices.
+
+[P3] The main facility is Ymir Locks, a stepped canal with scheduled crossings in both directions. Bifrost Terminals, a canal and port operator, is the best-known local firm. Warehousing and repair yards cluster around the locks.
+
+[P4] The canal authority publishes a schedule of crossings and a list of approved pilots. A road follows the water for most of its length, and small settlements have grown up around the lock gates.

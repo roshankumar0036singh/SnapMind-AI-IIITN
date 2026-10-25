@@ -1,0 +1,25 @@
+DOC_ID: ORV-0028
+EVENT_ID: E5
+TITLE: FAMINE FEAR AS ORVAN GRAIN VANISHES
+SOURCE_NAME: Daily Roar
+SOURCE_TYPE: tabloid
+RELIABILITY: 4
+PUB_DATE: 2026-10-05
+PUB_TIME: 06:05
+COUNTRY: Midgard
+SECTOR: Wheat
+LANGUAGE: en
+---
+FAMINE FEAR AS ORVAN GRAIN VANISHES
+
+[P1] Midgard is facing famine after Orvan's grain ships stopped sailing, the Daily Roar can reveal.
+
+[P2] Supermarket shelves will be empty within weeks, according to a source who works in a warehouse.
+
+[P3] "People should start stockpiling flour now," the source said.
+
+[P4] The government has refused to confirm the claim.
+
+[P5] The story is based on a single warehouse worker and a photograph of an empty shelf that the paper says was taken in Midgard. It does not name the store, the town or the date. The worker says other stores are the same, but the paper has not visited them. The paper says it stands by the story and is protecting the worker's identity. It has not said whether it asked the ministry for stock figures.
+
+[P6] Bread prices have already started to climb.

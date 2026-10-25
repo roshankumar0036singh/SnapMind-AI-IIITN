@@ -1,0 +1,84 @@
+{
+  "description": "Catalog of deliberate traps in dev_pack_E5 based on CONTEXT_UPDATED.md",
+  "as_of_date": "2027-01-25",
+  "traps": [
+    {
+      "category": "clock_violation",
+      "rule": "Documents published after the as-of date (2027-01-25) must be excluded from retrieval by hard tool-layer filters.",
+      "documents": [
+        {
+          "doc_id": "ORV-0014",
+          "file": "ORV-0014.docx",
+          "pub_date": "2027-03-12",
+          "title": "New corridor talks to open after Orvan request"
+        },
+        {
+          "doc_id": "ORV-0036",
+          "file": "ORV-0036.docx",
+          "pub_date": "2027-02-18",
+          "title": "Trade note: Orvan to Midgard, wheat, January 2027"
+        },
+        {
+          "doc_id": "ORV-0041",
+          "file": "ORV-0041.txt",
+          "pub_date": "2027-04-09",
+          "title": "Spring bookings point to a slow Orvan recovery"
+        }
+      ]
+    },
+    {
+      "category": "retraction_and_contradiction",
+      "rule": "ORV-0043 claims renewal; ORV-0013 is a published correction stating it was NOT renewed; ORV-0016 is Tier 1 official notice of expiration. Agents must follow correction chains and mark renewal claims as Contested/Conceded.",
+      "documents": [
+        {
+          "doc_id": "ORV-0043",
+          "file": "ORV-0043.pdf",
+          "source_type": "news",
+          "reliability": 2,
+          "title": "Orvan grain corridor renewed for a second year"
+        },
+        {
+          "doc_id": "ORV-0013",
+          "file": "ORV-0013.txt",
+          "source_type": "correction",
+          "reliability": 1,
+          "title": "Correction: Orvan corridor agreement was not renewed"
+        },
+        {
+          "doc_id": "ORV-0016",
+          "file": "ORV-0016.pdf",
+          "source_type": "gov_notice",
+          "reliability": 1,
+          "title": "Corridor Agreement expires with no renewal"
+        }
+      ]
+    },
+    {
+      "category": "tier_4_unreliable_rumours",
+      "rule": "Tabloid / social posts sensationalizing total destruction. Per ATL-0012 and CONTEXT_UPDATED.md, Tier 4 cannot support standalone claims.",
+      "documents": [
+        {
+          "doc_id": "ORV-0010",
+          "file": "ORV-0010.txt",
+          "source_type": "social_post",
+          "reliability": 4,
+          "title": "Orvan port gone"
+        },
+        {
+          "doc_id": "ORV-0026",
+          "file": "ORV-0026.txt",
+          "source_type": "blog",
+          "reliability": 4,
+          "title": "Sources: every grain ship sunk, Orvan port shut for good"
+        },
+        {
+          "doc_id": "ORV-0028",
+          "file": "ORV-0028.txt",
+          "source_type": "tabloid",
+          "reliability": 4,
+          "title": "FAMINE FEAR AS ORVAN GRAIN VANISHES"
+        }
+      ]
+    }
+  ]
+}

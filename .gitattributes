@@ -1,0 +1,10 @@
+# Auto detect text files and perform LF normalization on commit
+* text=auto eol=lf
+
+# Explicit binary files that must not undergo line ending conversion
+*.pdf binary
+*.docx binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ico binary

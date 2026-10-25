@@ -1,0 +1,25 @@
+DOC_ID: ORV-0032
+EVENT_ID: E5
+TITLE: Strike reduces operations at Orvan Grain Port
+SOURCE_NAME: Realm Trade Ministry
+SOURCE_TYPE: gov_notice
+RELIABILITY: 1
+PUB_DATE: 2026-09-15
+PUB_TIME: 08:30
+COUNTRY: Orvan
+SECTOR: Wheat
+LANGUAGE: en
+---
+Strike reduces operations at Orvan Grain Port
+
+[P1] The Realm Trade Ministry reports that dock workers at Orvan Grain Port began a strike on 14 September 2026.
+
+[P2] Some grain berths are closed and the remaining berths are working at reduced speed.
+
+[P3] Vessels already in the roads are being held. New arrivals may be asked to wait outside the harbour.
+
+[P4] The ministry is monitoring the effect on wheat and maize loadings and will publish statistics in the normal way.
+
+[P5] The strike notice is the ministry's first public statement on the disruption. It does not assign blame and does not set a deadline for a settlement. Port users are asked to keep their agents informed of any change to vessel arrivals, so that berths can be reallocated as they become free. The ministry says it will not comment on the course of the dispute while talks continue. Grain already in store at the port is being kept under the usual customs seal.
+
+[P6] Exporters should expect delays and should not assume a quick return to normal working.

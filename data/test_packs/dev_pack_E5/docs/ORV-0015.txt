@@ -1,0 +1,27 @@
+DOC_ID: ORV-0015
+EVENT_ID: E5
+TITLE: Asgard mediators welcome reported Orvan renewal
+SOURCE_NAME: Asgard Herald
+SOURCE_TYPE: news
+RELIABILITY: 3
+PUB_DATE: 2026-09-09
+PUB_TIME: 19:05
+COUNTRY: Asgard
+SECTOR: Wheat
+LANGUAGE: en
+---
+Asgard mediators welcome reported Orvan renewal
+
+[P1] Asgard officials have welcomed reports that the Orvan grain corridor will be renewed for another year.
+
+[P2] The Asgard Herald understands that the agreement will keep sea exports near their recent level.
+
+[P3] "A renewed corridor is good for every buyer on this coast," said Maren Holt, the Asgard trade minister.
+
+[P4] The ministry said it could not confirm the terms until the parties publish them.
+
+[P5] The paper's report followed the wire story and added reaction from Asgard officials who had been briefed on the talks. The officials welcomed a renewal they had not seen in writing, and the paper did not ask for the text. The story ran on the front page of the evening edition with a photograph of the port. The paper did not say when the new term would begin.
+
+[P6] For Asgard buyers, the report suggested that the recent pattern of arrivals would continue without a break. Feed mills that had been testing alternative suppliers put those enquiries on hold. Port agents said they had no instruction to change berth bookings. The paper's sources stood by the account on the day it was published.
+
+[P7] Shipping agents in Asgard reported no change to schedules.

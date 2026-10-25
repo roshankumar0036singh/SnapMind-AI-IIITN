@@ -1,0 +1,12 @@
+{
+  "description": "Catalog of damaged files in dev_pack_E5 based on CONTEXT_UPDATED.md Sections 8 and 14",
+  "damaged_files": [
+    {
+      "doc_id": "ORV-0023",
+      "file": "ORV-0023.txt",
+      "damage_type": "empty_file",
+      "bytes": 0,
+      "expected_behavior": "Ingestion pipeline must detect 0 bytes, flag as damaged: empty, record in ingest report, skip indexing, and never crash."
+    }
+  ]
+}

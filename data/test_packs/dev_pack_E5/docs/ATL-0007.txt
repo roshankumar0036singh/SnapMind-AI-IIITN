@@ -1,0 +1,21 @@
+DOC_ID: ATL-0007
+EVENT_ID: NONE
+TITLE: Product notes
+SOURCE_NAME: Realm Trade Ministry
+SOURCE_TYPE: atlas
+RELIABILITY: 1
+PUB_DATE: 2024-01-16
+PUB_TIME: 10:00
+COUNTRY: Asgard
+SECTOR: general
+LANGUAGE: en
+---
+Product notes
+
+[P1] LNG is quoted in USD per million Btu, usually between 8 and 14. LPG is quoted in USD per tonne, usually between 450 and 650. Wheat is quoted in USD per tonne, usually between 220 and 320. Maize is quoted in USD per tonne, usually between 180 and 280.
+
+[P2] Soya beans are quoted in USD per tonne, usually between 380 and 520. Rice is quoted in USD per tonne, usually between 400 and 600. Copper ore is quoted in USD per tonne of contained copper, usually between 8,000 and 10,500. Specialty metals are quoted in USD per tonne, usually between 20,000 and 40,000.
+
+[P3] Computer chips are quoted in USD per unit, usually between 40 and 120. Consumer goods are tracked with an index based at 100, usually moving between 100 and 120. Fertiliser is quoted in USD per tonne, usually between 300 and 500. Medicines are tracked with an index based at 100, usually moving between 100 and 115.
+
+[P4] The ranges are indicative and describe ordinary conditions. They are not forecasts, and they do not replace the prices or values reported in a specific document. Trade notes state their own units and months.

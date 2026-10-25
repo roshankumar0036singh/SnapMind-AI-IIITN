@@ -1,0 +1,27 @@
+DOC_ID: ORV-0035
+EVENT_ID: E5
+TITLE: December loadings close a poor quarter at Orvan Grain Port
+SOURCE_NAME: Cargo Weekly
+SOURCE_TYPE: shipping_update
+RELIABILITY: 2
+PUB_DATE: 2027-01-14
+PUB_TIME: 12:10
+COUNTRY: Orvan
+SECTOR: general
+LANGUAGE: en
+---
+December loadings close a poor quarter at Orvan Grain Port
+
+[P1] Orvan Grain Port loaded grain at about 30 on the ministry index in December, according to preliminary port figures.
+
+[P2] That compares with 32 in November and 38 in October. The old normal is 100.
+
+[P3] The port strike that began in September has left berth availability below normal.
+
+[P4] Rail loadings through Ravik remain high, and Vanir has increased wheat shipments to Tolan and Midgard.
+
+[P5] The quarterly picture is one of a deep loss followed by a partial and uneven recovery. Loadings fell fastest in the first weeks after the agreement ended, when the strike and the paperwork for the new rules coincided. They have since stabilised at a low level rather than recovered. Port users say the return of some berths has helped, but the queue for rail paths and the cost of insurance remain obstacles. The ministry is expected to publish the December index in the normal cycle.
+
+[P6] The ministry's December return will be watched for signs that the low has passed. Port agents say berth use has improved slightly, but they do not expect a quick return to the old pace. Rail and Vanir supply are expected to remain part of the mix. The ministry has not given a date for the next return.
+
+[P7] Shipowners say the sea route is operating, but with longer waits and higher insurance costs.

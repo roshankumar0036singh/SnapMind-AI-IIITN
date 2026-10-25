@@ -1,0 +1,21 @@
+DOC_ID: ATL-0016
+EVENT_ID: NONE
+TITLE: Firm directory
+SOURCE_NAME: Realm Trade Ministry
+SOURCE_TYPE: atlas
+RELIABILITY: 1
+PUB_DATE: 2024-01-16
+PUB_TIME: 09:30
+COUNTRY: Asgard
+SECTOR: general
+LANGUAGE: en
+---
+Firm directory
+
+[P1] Longship Lines (Asgard) is a container shipping firm. Hammer Freight (Midgard) is a bulk shipping firm. Wolf Logistics (Utgard) is a freight forwarder. Bifrost Terminals (Ymir) operates canal and port facilities. Rune Trading (Vanir) trades grain and rice.
+
+[P2] Shield Insurance (Asgard) is a marine insurer. Axe Metals (Dorin) is a specialty-metal miner. Solen Energy (Solvar) produces LNG. Brightwave Shipping (Solvar) carries LNG and runs tankers. Corvan Grain (Orvan) exports grain.
+
+[P3] Nexor Chips (Ketra) makes computer chips. Granite Mining (Valhalla) mines copper. Paxen Pharma (Midgard) makes medicines. Anchor Marine (Tolan) provides port services. Vantro Trading (Ravik) is a commodity trader.
+
+[P4] The directory lists normal activities only. A firm's home country is where its head office and main operations are based; many firms also work in other countries through branches, agents or long-term contracts.

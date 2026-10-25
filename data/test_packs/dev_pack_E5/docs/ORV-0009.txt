@@ -1,0 +1,41 @@
+DOC_ID: ORV-0009
+EVENT_ID: E5
+TITLE: Trade note: Orvan to Midgard, wheat, July to December 2026
+SOURCE_NAME: Realm Trade Ministry
+SOURCE_TYPE: trade_note
+RELIABILITY: 1
+PUB_DATE: 2027-01-19
+PUB_TIME: 09:20
+COUNTRY: Midgard
+SECTOR: Wheat
+LANGUAGE: en
+---
+Trade note: Orvan to Midgard, wheat, July to December 2026
+
+[P1] Route: Orvan to Midgard, wheat.
+
+[P2] In July 2026, the value was USD 90.0M and the volume was 250,000 tonnes.
+
+[P3] In August 2026, the value was USD 96.1M and the volume was 267,000 tonnes.
+
+[P4] In September 2026, the value was USD 38.2M and the volume was 93,000 tonnes.
+
+[P5] In October 2026, the value was USD 34.5M and the volume was 84,000 tonnes.
+
+[P6] In November 2026, the value was USD 35.3M and the volume was 86,000 tonnes.
+
+[P7] In December 2026, the value was USD 34.1M and the volume was 83,000 tonnes.
+
+[P8] In July 2025, the value was USD 94.7M and the volume was 263,000 tonnes.
+
+[P9] In August 2025, the value was USD 101.5M and the volume was 282,000 tonnes.
+
+[P10] In September 2025, the value was USD 97.9M and the volume was 272,000 tonnes.
+
+[P11] In October 2025, the value was USD 86.8M and the volume was 241,000 tonnes.
+
+[P12] In November 2025, the value was USD 88.6M and the volume was 246,000 tonnes.
+
+[P13] In December 2025, the value was USD 85.0M and the volume was 236,000 tonnes.
+
+[P14] December was the weakest month of the half-year, and rail loadings through Ravik were still rising.

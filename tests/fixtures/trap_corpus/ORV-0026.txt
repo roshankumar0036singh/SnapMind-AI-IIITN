@@ -1,0 +1,23 @@
+DOC_ID: ORV-0026
+EVENT_ID: E5
+TITLE: Sources: every grain ship sunk, Orvan port shut for good
+SOURCE_NAME: Trade Whisper
+SOURCE_TYPE: blog
+RELIABILITY: 4
+PUB_DATE: 2026-09-16
+PUB_TIME: 06:55
+COUNTRY: Orvan
+SECTOR: Wheat
+LANGUAGE: en
+---
+Sources: every grain ship sunk, Orvan port shut for good
+
+[P1] A source close to the docks says all grain ships at Orvan Grain Port have been sunk and the port will not reopen.
+
+[P2] The same source says the corridor agreement is dead and that no buyer should expect a cargo this year.
+
+[P3] Officials have said nothing publicly beyond a short strike notice.
+
+[P4] The post names no source, but it says the account comes from someone who works at the port. It adds that the person was last on the quay before the strike and has not been back since. The blog has run similar reports before and often asks readers to share them widely. It does not say how many ships are involved.
+
+[P5] The port has not commented. The blog says it will update the post if it hears more.

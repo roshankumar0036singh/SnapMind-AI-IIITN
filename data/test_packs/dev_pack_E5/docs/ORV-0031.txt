@@ -1,0 +1,27 @@
+DOC_ID: ORV-0031
+EVENT_ID: E5
+TITLE: Asgard feed buyers feel the cost of a shorter Orvan harvest
+SOURCE_NAME: Asgard Herald
+SOURCE_TYPE: news
+RELIABILITY: 3
+PUB_DATE: 2026-11-05
+PUB_TIME: 09:15
+COUNTRY: Asgard
+SECTOR: Maize
+LANGUAGE: en
+---
+Asgard feed buyers feel the cost of a shorter Orvan harvest
+
+[P1] Feed compounders in Asgard are paying more for maize as arrivals from Orvan slow and the corridor agreement remains lapsed.
+
+[P2] Asgard's long-term wheat contract with Orvan is mostly protected, local buyers say, but maize is bought on the open market.
+
+[P3] "The contract covers our wheat, not our maize," said Maren Holt, the Asgard trade minister.
+
+[P4] Port agents in Asgard report longer waits for maize cargoes and more spot purchases from Vanir.
+
+[P5] The difference between the two products is the heart of the story here. Wheat bought under the long-term contract arrives on schedule and at agreed terms, while maize is bought cargo by cargo and is exposed to the spot market. Feed compounders say they can change rations for a while, but not indefinitely, and that the cost of switching is already showing in their margins. The ministry has asked buyers to report any difficulty in securing cover.
+
+[P6] The ministry's stock estimate covers wheat and maize together, which makes it hard to see the maize position on its own. Feed buyers say they are working through contracts signed before the corridor ended. They expect the next round of purchases to be smaller. The ministry has not said when it will update the estimate.
+
+[P7] The ministry has not revised its stock estimate for the winter.

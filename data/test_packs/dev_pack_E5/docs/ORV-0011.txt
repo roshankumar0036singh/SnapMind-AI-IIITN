@@ -1,0 +1,27 @@
+DOC_ID: ORV-0011
+EVENT_ID: NONE
+TITLE: Orvan growers point to a full wheat store after a dry spring
+SOURCE_NAME: Raven Wire
+SOURCE_TYPE: news
+RELIABILITY: 2
+PUB_DATE: 2026-04-08
+PUB_TIME: 07:35
+COUNTRY: Orvan
+SECTOR: Wheat
+LANGUAGE: en
+---
+Orvan growers point to a full wheat store after a dry spring
+
+[P1] Orvan farm groups expect a solid wheat harvest this season after a dry spring and a cool start to the growing year.
+
+[P2] "The crop is thin in places, but the store should be full," said Leif Garrow, who leads the Orvan farm union.
+
+[P3] Growers say maize planting is on schedule and that fuel and machinery costs remain the main concern.
+
+[P4] The ministry has not published a harvest estimate. Traders are watching the weather rather than the port.
+
+[P5] The farm union's mood is better than it was at the start of the season, when dry weather delayed planting in the west. Growers say the rain came late but in time for the grain to fill, and that the maize crop has caught up. The union is more worried about the cost of spare parts and the availability of seasonal labour than about the harvest itself. Local mills say they expect to buy most of their wheat close to home this year.
+
+[P6] The union says the rain came at the right time for the wheat, though the west is still drier than the east. It expects the maize harvest to begin on schedule. The ministry has not published a forecast, and the union has not asked for one. Local buyers say they will wait for the first samples before setting terms.
+
+[P7] Local buyers say domestic flour demand is steady.

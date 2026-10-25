@@ -1,0 +1,23 @@
+DOC_ID: ORV-0048
+EVENT_ID: E5
+TITLE: How the Orvan grain corridor worked, and why its ending matters
+SOURCE_NAME: Harbour Review
+SOURCE_TYPE: explainer
+RELIABILITY: 2
+PUB_DATE: 2026-09-12
+PUB_TIME: 10:15
+COUNTRY: Orvan
+SECTOR: general
+LANGUAGE: en
+---
+How the Orvan grain corridor worked, and why its ending matters
+
+[P1] The Corridor Agreement was a one-year arrangement signed on 10 September 2025. Asgard mediated it.
+
+[P2] Orvan grows more wheat and maize than it eats and sells the surplus by sea from Orvan Grain Port. The agreement kept that sea route open to commercial ships.
+
+[P3] Under the agreement, sea exports ran at about 95% of the old normal. The deal covered wheat and maize leaving the port by sea; it did not cover rail movements or sales by other exporters.
+
+[P4] The agreement expired on 10 September 2026. Talks on renewal failed, and the port moved onto the general rules with no replacement arrangement.
+
+[P5] The main alternative is rail. The Ravik Rail Link can carry grain to Ravik and onward, but its capacity is limited and it cannot move the volumes

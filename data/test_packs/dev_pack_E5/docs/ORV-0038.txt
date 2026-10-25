@@ -1,0 +1,27 @@
+DOC_ID: ORV-0038
+EVENT_ID: NONE
+TITLE: Bread prices in Midgard edge up as millers hold margins
+SOURCE_NAME: Midgard Times
+SOURCE_TYPE: news
+RELIABILITY: 2
+PUB_DATE: 2026-05-14
+PUB_TIME: 09:30
+COUNTRY: Midgard
+SECTOR: general
+LANGUAGE: en
+---
+Bread prices in Midgard edge up as millers hold margins
+
+[P1] Midgard bakeries have raised the price of a standard loaf again this year, citing higher energy and transport costs.
+
+[P2] Millers say flour prices have been stable and that the increase is mostly in distribution.
+
+[P3] "The loaf is not the problem; the diesel is," said a bakery owner in the capital.
+
+[P4] The consumer office says it is monitoring the trend but sees no shortage.
+
+[P5] The increase is small in cash terms but visible to shoppers, and it has prompted questions about how the cost is split between the mill, the bakery and the shop. Millers say their own input costs have been stable and that they have not passed on the full rise in energy and transport. The consumer office says it will keep watching the weekly basket. Bakeries say they have little room left to absorb further increases without cutting staff hours.
+
+[P6] The bakery association says its members have tried to keep the standard loaf unchanged and have cut other lines instead. It warns that another rise in diesel would force a further increase. The consumer office says it has no evidence of a supply problem. Supermarkets say they are watching rival prices before they decide.
+
+[P7] Supermarket chains say they have absorbed part of the increase.

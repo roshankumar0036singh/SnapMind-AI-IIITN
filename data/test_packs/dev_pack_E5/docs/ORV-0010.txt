@@ -1,0 +1,17 @@
+DOC_ID: ORV-0010
+EVENT_ID: E5
+TITLE: Orvan port gone
+SOURCE_NAME: Saga Chat
+SOURCE_TYPE: social_post
+RELIABILITY: 4
+PUB_DATE: 2026-09-15
+PUB_TIME: 21:40
+COUNTRY: Orvan
+SECTOR: Wheat
+LANGUAGE: en
+---
+Orvan port gone
+
+[P1] Hearing Orvan Grain Port was destroyed last night. No ships moving. Friends in Orvan say the whole quay is gone.
+
+[P2] Nobody is loading anything. Keep this moving before the usual people deny it.

@@ -1,0 +1,27 @@
+DOC_ID: ORV-0042
+EVENT_ID: E5
+TITLE: Anchor Marine reports busier berths at Tolan Harbour
+SOURCE_NAME: Anchor Marine
+SOURCE_TYPE: company_statement
+RELIABILITY: 2
+PUB_DATE: 2026-11-25
+PUB_TIME: 13:05
+COUNTRY: Tolan
+SECTOR: Wheat
+LANGUAGE: en
+---
+Anchor Marine reports busier berths at Tolan Harbour
+
+[P1] Anchor Marine says Tolan Harbour is handling more wheat cargoes from Vanir as Tolan buyers replace some Orvan supply.
+
+[P2] The extra traffic has lengthened berth waits, though the port is operating normally.
+
+[P3] "The volumes are welcome, but they are smaller than the Orvan trade we have lost," said a company spokesperson.
+
+[P4] Anchor Marine provides port services at Tolan Harbour and does not trade grain itself.
+
+[P5] Tolan Harbour has taken grain from Vanir before, but rarely at this pace. The extra calls have filled the berths and pushed waiting times up, and the port has had to find space for containers that would normally move through without delay. Anchor Marine says the change is manageable because the Vanir parcels are smaller than the Orvan cargoes they replace. The company is not involved in the grain trade itself and takes no position on prices.
+
+[P6] The extra calls have also brought more paperwork, and the company has taken on temporary staff at the gate. It says the port's storage yard is fuller than usual, though not beyond capacity. The company has not raised its fees for the additional shift. It expects the pattern to continue while Orvan's sea route is disrupted.
+
+[P7] The company has added an extra shift for cargo documentation.

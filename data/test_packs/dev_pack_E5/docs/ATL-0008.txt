@@ -1,0 +1,21 @@
+DOC_ID: ATL-0008
+EVENT_ID: NONE
+TITLE: Country profile: Midgard
+SOURCE_NAME: Realm Trade Ministry
+SOURCE_TYPE: atlas
+RELIABILITY: 1
+PUB_DATE: 2024-01-15
+PUB_TIME: 09:15
+COUNTRY: Midgard
+SECTOR: general
+LANGUAGE: en
+---
+Country profile: Midgard
+
+[P1] Midgard is a large importer on the Inner Sea with a broad industrial and consumer base. It makes medicines and consumer goods and depends on imported food, grain and energy for a substantial part of its needs.
+
+[P2] The country's main exports are medicines and consumer goods. Its main imports are rice, grain and LNG. Midgard Harbour is the principal import port, with dedicated berths for containers, bulk cargo and liquid fuels.
+
+[P3] Hammer Freight, a bulk shipping firm, and Paxen Pharma, a medicines maker, are among the country's best-known companies. Midgard also has a dense road and rail network linking the port to inland distribution centres.
+
+[P4] Inland distribution relies on that network rather than on a single hub. The capital has several wholesale depots, and smaller cities act as regional collection points for imported goods.

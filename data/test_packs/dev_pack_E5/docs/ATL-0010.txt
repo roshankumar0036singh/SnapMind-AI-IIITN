@@ -1,0 +1,21 @@
+DOC_ID: ATL-0010
+EVENT_ID: NONE
+TITLE: Country profile: Tolan
+SOURCE_NAME: Realm Trade Ministry
+SOURCE_TYPE: atlas
+RELIABILITY: 1
+PUB_DATE: 2024-01-15
+PUB_TIME: 11:15
+COUNTRY: Tolan
+SECTOR: general
+LANGUAGE: en
+---
+Country profile: Tolan
+
+[P1] Tolan is an island importer with a narrow economic base. It produces few goods of its own and depends on imported rice, wheat and fuel for most of its needs.
+
+[P2] The main imports are rice, wheat and fuel. The country's exports are limited and consist mainly of services and small quantities of light manufactures. Tolan Harbour is the principal island port, handling containers, bulk cargo and passenger traffic.
+
+[P3] Anchor Marine, a port services firm, is the best-known local company. The island has a single main road network and relies on coastal shipping and a small number of scheduled services for connections to the mainland.
+
+[P4] The main road runs around the coast, with smaller routes into the hills. A scheduled passenger service connects the harbour to the mainland, and most goods arrive by sea.

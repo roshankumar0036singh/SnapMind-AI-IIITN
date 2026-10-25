@@ -1,0 +1,27 @@
+DOC_ID: ORV-0034
+EVENT_ID: E5
+TITLE: Orvan grain ships turn back as corridor deal lapses
+SOURCE_NAME: Raven Wire
+SOURCE_TYPE: news
+RELIABILITY: 2
+PUB_DATE: 2026-09-11
+PUB_TIME: 06:20
+COUNTRY: Orvan
+SECTOR: Wheat
+LANGUAGE: en
+---
+Orvan grain ships turn back as corridor deal lapses
+
+[P1] By Oskar Fenn. Orvan's one-year grain corridor agreement ended on 10 September with no renewal, and the first ships due to load have been held outside Orvan Grain Port.
+
+[P2] Several vessel operators said inspections at sea had delayed cargoes, and one said a wheat cargo bound for Midgard had returned to anchor.
+
+[P3] The Realm Trade Ministry said exports would continue under general rules. It gave no figure for September loadings.
+
+[P4] "We have no cover for next month and no clear rule for the ships already booked," said Leif Garrow, who leads the Orvan farm union.
+
+[P5] At the port, agents spent the morning moving bookings that could not be loaded onto other vessels. Several ships that had been waiting outside the harbour were still there at dusk, and a queue of grain trucks formed at the landward gate. The ministry's notice on the lapse was short and gave no estimate of the volume affected. Traders said the immediate question was not price but whether the ships already booked would be allowed to load at all. The farm union has asked for a meeting with the ministry later in the week.
+
+[P6] The ministry's notice was posted at the port gate and sent to registered exporters. It did not say how many ships were affected. Agents said the queue was growing through the afternoon. By evening, some buyers had begun to ask for delivery by rail.
+
+[P7] Wheat offers for later delivery firmed in early trade, though volumes were thin.

@@ -1,0 +1,27 @@
+DOC_ID: ORV-0050
+EVENT_ID: E5
+TITLE: Rail takes the strain on the Orvan to Ravik grain run
+SOURCE_NAME: Harbour Review
+SOURCE_TYPE: trade_press
+RELIABILITY: 2
+PUB_DATE: 2026-11-20
+PUB_TIME: 11:25
+COUNTRY: Ravik
+SECTOR: Wheat
+LANGUAGE: en
+---
+Rail takes the strain on the Orvan to Ravik grain run
+
+[P1] Grain traffic on the Ravik Rail Link has risen sharply since Orvan's sea corridor agreement lapsed, but operators warn that the line cannot absorb the lost sea volumes.
+
+[P2] The rail link normally carries about USD 25M of Orvan wheat a month. Volumes in recent weeks ran well above the same weeks a year earlier.
+
+[P3] "We are running extra paths, but the link is a single corridor with limited sidings," said Samir Tolle, a commodity trader who books space on the route.
+
+[P4] Rail tariffs have risen with demand. Road haulage is being used for short gaps, at higher cost.
+
+[P5] The rail link was built for transit, not for the grain trade on this scale, and its limits are now visible in the timetable. Paths are shared with general freight, and the sidings at the border can hold only a few trains at a time. Operators say a train that misses its slot can wait most of a day before another path opens. Even so, the link is carrying more grain than at any time in recent years, and the operator has added staff at the busiest yards. Traders describe it as a bridge that works, but only for a share of the trade.
+
+[P6] The operator says the extra traffic has been handled without a formal priority scheme. Contracted cargoes go first, and spot cargoes take what is left. That has kept the link moving but has made it harder for new buyers to book space. The operator has no plans to add paths before the next timetable review.
+
+[P7] The line's operator says priority is being given to contracted cargoes.
