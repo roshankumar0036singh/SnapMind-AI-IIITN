@@ -214,3 +214,24 @@ AS $$
     ORDER BY combined_score DESC
     LIMIT match_count;
 $$;
+
+-- ==============================================================================
+-- 8. Trial Events Table (append-only audit trail for all agents)
+-- ==============================================================================
+CREATE TABLE IF NOT EXISTS trial_events (
+    id BIGSERIAL PRIMARY KEY,
+    case_id TEXT,
+    event_type TEXT NOT NULL,   -- e.g. 'heimdall_started', 'citation_verified', 'memory_written'
+    agent TEXT NOT NULL,        -- 'heimdall', 'thor', 'loki', 'odin', 'runner'
+    run_no INT DEFAULT 1,
+    details JSONB DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Index for efficient querying by case
+CREATE INDEX IF NOT EXISTS idx_trial_events_case_id ON trial_events (case_id);
+CREATE INDEX IF NOT EXISTS idx_trial_events_agent    ON trial_events (agent, run_no);
+
+-- Row Level Security: trial_events are append-only by design.
+-- No UPDATE or DELETE should be permitted on this table.
+-- (Enforce via Supabase RLS policies in the dashboard.)
