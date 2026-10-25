@@ -93,7 +93,7 @@ class SupabaseDocumentLoader:
 
         # Generate Gemini embeddings if requested and client available
         if generate_embeddings and self.embedding_client:
-            print(f"Generating 768-dim embeddings via Gemini text-embedding-004 for {len(texts_to_embed)} documents...")
+            print(f"Generating {self.embedding_client.DIMENSION}-dim embeddings via Gemini {self.embedding_client.model_name} for {len(texts_to_embed)} documents...")
             try:
                 embeddings = self.embedding_client.get_embeddings_batch(texts_to_embed, batch_size=self.BATCH_SIZE)
                 for i, emb in enumerate(embeddings):
