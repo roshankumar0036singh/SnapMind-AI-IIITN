@@ -219,8 +219,7 @@ def search_docs(
             "exposed", "about", "before", "after", "between", "under", "over", "does", "did",
             "many", "much", "more", "most", "some", "such", "than", "then", "into", "onto",
             "also", "only", "other", "their", "there", "they", "them", "then", "your", "ours",
-            "january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december",
-            "thor", "loki", "odin", "heimdall", "agent", "agents", "tell", "please", "show", "user"
+            "january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"
         }
         tokens = re.findall(r'[A-Za-z0-9_-]+', clean_query)
         keywords = [t for t in tokens if len(t) > 3 and t.lower() not in STOPWORDS]

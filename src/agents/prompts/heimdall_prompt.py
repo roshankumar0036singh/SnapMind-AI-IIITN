@@ -582,14 +582,12 @@ ID DISTINCTIONS:
 - doc_id: The document identifier (e.g. "ORV-0002", "ORV-0016"). Used in supporting_refs, reasons, and citations.
 
 VERDICT DECISION RULES:
-- The event verified MUST directly match the claim or disruption asked about in the user question.
-- verdict = "real"          → At least ONE document confirms the disruption event asked about in the question occurred.
+- verdict = "real"          → At least ONE document confirms the event occurred.
   IMPORTANT: Missing trade-volume data, price figures, or exposure estimates do NOT
   make an event unverifiable. Those are Thor and Loki's job. If the event itself is
   confirmed, verdict = "real" and wake_next = "thor_and_loki".
-- verdict = "rumour"        → Documents say the claim asked about in the question has NOT been confirmed / is disputed.
-- verdict = "unverifiable"  → No retrieved document mentions the event in the question, OR the question is nonsensical / unrelated to any documented supply disruption.
-  If the question is out of domain or the documents do not support the question's subject, verdict MUST be "unverifiable", confidence = 0.0, and wake_next = "none".
+- verdict = "rumour"        → Documents say the claim has NOT been confirmed / is disputed.
+- verdict = "unverifiable"  → No retrieved document mentions the event at all.
 
 EXAMPLE:
   Event: "Orvan Corridor Agreement ended"
