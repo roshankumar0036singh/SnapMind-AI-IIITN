@@ -38,11 +38,12 @@ class HybridSearcher:
                 print(f"Warning: Failed to generate query embedding ({e}). Proceeding with FTS only.")
 
         # 2. Call Supabase RPC stored procedure 'hybrid_search_docs'
+        candidate_count = query.top_k * 4 if query.use_reranker else query.top_k
         rpc_params = {
             "query_text": query.query_text,
             "query_embedding": query_embedding,
             "as_of_limit": query.filters.as_of_date.isoformat(),
-            "match_count": query.top_k,
+            "match_count": candidate_count,
             "full_text_weight": 1.0,
             "vector_weight": 1.0,
             "filter_country": query.filters.country,
@@ -83,6 +84,11 @@ class HybridSearcher:
                 is_retracted=row.get("is_retracted", False),
             )
             results.append(item)
+
+        # 4. Apply Cross-Encoder Reranker if requested
+        if query.use_reranker and results:
+            from src.retrieval.reranker import get_reranker
+            results = get_reranker().rerank(query.query_text, results, top_k=query.top_k)
 
         return results
 
