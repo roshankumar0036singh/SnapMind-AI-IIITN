@@ -16,7 +16,7 @@ class CitationValidator:
     Enforces Simulated Clock gates, retraction exclusions, damage traps, and prompt-injection quarantines.
     """
 
-    DOC_REF_PATTERN = re.compile(r"^([A-Z0-9]+-[0-9]+)(?:#P(\d+))?$", re.IGNORECASE)
+    DOC_REF_PATTERN = re.compile(r"^([A-Z0-9]+(?:-[A-Z0-9]+)+)(?:#P(\d+))?$", re.IGNORECASE)
     TABLE_REF_PATTERN = re.compile(r"^([A-Z0-9]+(?:-[A-Z0-9]+)+)#(\d+)(?:-\d+)?$", re.IGNORECASE)
 
     def __init__(self, local_docs: Optional[Dict[str, Dict[str, Any]]] = None, local_trade_rows: Optional[Dict[str, Dict[str, Any]]] = None):
