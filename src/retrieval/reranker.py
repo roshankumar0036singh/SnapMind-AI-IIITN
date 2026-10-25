@@ -1,41 +1,50 @@
+import os
 import math
 from typing import List, Optional, Tuple, Dict, Any
+
 from src.schemas.retrieval import SearchResultItem
+from src.config import get_settings
 
 
 class CrossEncoderReranker:
     """
-    Reranker for hybrid search candidates.
+    Reranker for hybrid search candidates using Cohere's state-of-the-art Reranker (rerank-v3.5).
     Evaluates deep sentence-level query-document interaction over top ~25-30 candidates
     and selects top 5-8 high-precision excerpts.
     Preserves outlet credibility tiers, timestamps, and deliberate trap flags.
     Fulfills CONTEXT_UPDATED.md Section 6.
     """
 
-    DEFAULT_MODEL_NAME = "cross-encoder/ms-marco-MiniLM-L-6-v2"
+    DEFAULT_MODEL_NAME = "rerank-v3.5"
 
-    def __init__(self, model_name: Optional[str] = None, enable_heavy_model: bool = False):
-        self.model_name = model_name or self.DEFAULT_MODEL_NAME
+    def __init__(
+        self,
+        api_key: Optional[str] = None,
+        model_name: Optional[str] = None,
+        enable_heavy_model: bool = False,
+    ):
+        settings = get_settings()
+        self.api_key = api_key or settings.COHERE_API_KEY or os.getenv("COHERE_API_KEY")
+        self.model_name = model_name or os.getenv("COHERE_RERANK_MODEL", self.DEFAULT_MODEL_NAME)
         self.enable_heavy_model = enable_heavy_model
-        self._model = None
+        self._cohere_client = None
 
     @property
-    def model(self):
-        if self._model is None and self.enable_heavy_model:
+    def cohere_client(self):
+        if self._cohere_client is None and self.api_key:
             try:
-                from sentence_transformers import CrossEncoder
-                self._model = CrossEncoder(self.model_name)
+                import cohere
+                self._cohere_client = cohere.Client(api_key=self.api_key)
             except Exception as e:
-                # Log warning and fall back to fast lexical-semantic scorer
-                print(f"Notice: CrossEncoder model loading deferred or failed ({e}). Using fast lexical-semantic reranker.")
-                self._model = False
-        return self._model
+                print(f"Notice: Cohere client initialization failed ({e}). Using fast cross-scoring fallback.")
+                self._cohere_client = False
+        return self._cohere_client
 
     @staticmethod
     def _fast_cross_score(query: str, doc_text: str, title: str) -> float:
         """
-        Fast, deterministic cross-scoring function used when neural cross-encoder is offline.
-        Evaluates exact phrase matching, term overlap, title alignment, and length penalty.
+        Fast, deterministic cross-scoring function used when Cohere API is offline or unconfigured.
+        Evaluates exact phrase matching, term overlap, title alignment, and frequency density.
         """
         q_tokens = [t.lower() for t in query.strip().split() if len(t) > 1]
         if not q_tokens:
@@ -73,7 +82,6 @@ class CrossEncoderReranker:
 
         # Combined normalized score
         raw_score = (overlap_ratio * 3.0) + (title_ratio * 2.0) + exact_bonus + density
-        # Sigmoid squash to (0, 1)
         return round(1.0 / (1.0 + math.exp(-raw_score + 2.0)), 4)
 
     def rerank(
@@ -83,42 +91,42 @@ class CrossEncoderReranker:
         top_k: int = 5,
     ) -> List[SearchResultItem]:
         """
-        Scores candidate documents against the query and returns top_k reranked items.
-        Logs score_before and score_after for observability (NFR4).
+        Reranks candidate documents against the query using Cohere Rerank API (with deterministic fallback).
+        Preserves all metadata, trap flags, and credibility tiers.
         """
         if not candidates:
             return []
 
-        scored_candidates: List[Tuple[float, float, SearchResultItem]] = []
-
-        # Attempt neural CrossEncoder if enabled and available
-        neural_scores = None
-        if self.model and hasattr(self.model, "predict"):
+        # 1. Try Cohere Rerank if client is available
+        if self.cohere_client and hasattr(self.cohere_client, "rerank"):
             try:
-                pairs = [[query, f"{c.title}\n{c.text}"] for c in candidates]
-                raw_preds = self.model.predict(pairs)
-                # Convert logits to probabilities
-                neural_scores = [round(1.0 / (1.0 + math.exp(-s)), 4) for s in raw_preds]
+                documents = [f"{c.title}\n\n{c.text}" for c in candidates]
+                response = self.cohere_client.rerank(
+                    model=self.model_name,
+                    query=query,
+                    documents=documents,
+                    top_n=min(top_k, len(candidates)),
+                )
+                
+                reranked_results: List[SearchResultItem] = []
+                for item in response.results:
+                    cand = candidates[item.index]
+                    cand.score = round(float(item.relevance_score), 4)
+                    reranked_results.append(cand)
+                return reranked_results
             except Exception as e:
-                neural_scores = None
+                print(f"Notice: Cohere rerank API call failed ({e}). Falling back to fast cross-scorer.")
 
-        for idx, item in enumerate(candidates):
-            score_before = item.score
+        # 2. Fallback: Fast deterministic lexical-semantic cross-scoring
+        scored_candidates: List[Tuple[float, float, SearchResultItem]] = []
+        for cand in candidates:
+            score_before = cand.score
+            score_after = self._fast_cross_score(query, cand.text, cand.title)
+            cand.score = score_after
+            scored_candidates.append((score_after, score_before, cand))
 
-            if neural_scores is not None and idx < len(neural_scores):
-                score_after = float(neural_scores[idx])
-            else:
-                score_after = self._fast_cross_score(query, item.text, item.title)
-
-            # Update item's internal score to rerank score
-            item.score = score_after
-            scored_candidates.append((score_after, score_before, item))
-
-        # Sort descending by rerank score
         scored_candidates.sort(key=lambda x: x[0], reverse=True)
-
-        # Return top_k
-        return [item for _, _, item in scored_candidates[:top_k]]
+        return [cand for _, _, cand in scored_candidates[:top_k]]
 
 
 _reranker_instance: Optional[CrossEncoderReranker] = None
