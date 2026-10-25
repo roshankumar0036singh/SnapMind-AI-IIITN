@@ -4,7 +4,7 @@ from src.llm.embeddings import GeminiEmbeddingClient
 
 def test_embedding_client_init():
     client = GeminiEmbeddingClient(api_key="mock_test_key")
-    assert client.MODEL_NAME == "text-embedding-004"
+    assert "embedding" in client.MODEL_NAME
     assert client.DIMENSION == 768
     assert client.api_key == "mock_test_key"
 

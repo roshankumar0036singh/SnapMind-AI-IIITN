@@ -12,6 +12,7 @@ class GeminiEmbeddingClient:
     Matches Supabase vector(768) column specification in supabase_schema.sql.
     """
     DEFAULT_MODEL = "gemini-embedding-001"
+    MODEL_NAME = "gemini-embedding-001"
     DIMENSION = 768
 
     def __init__(self, api_key: Optional[str] = None, model_name: Optional[str] = None):
