@@ -54,12 +54,15 @@ from src.tools.heimdall_tools import (
     verify_citation,
 )
 
+from dotenv import load_dotenv
+load_dotenv()
+from src.config import get_settings
+
 # ---------------------------------------------------------------------------
 # Groq client setup
 # ---------------------------------------------------------------------------
-GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 GROQ_BASE_URL = "https://api.groq.com/openai/v1"
-GROQ_MODEL = "llama-3.3-70b-versatile"
+GROQ_MODEL = os.getenv("GROQ_MODEL", "qwen/qwen3.8-27b")
 MAX_TOKENS = 4096
 TEMPERATURE = 0.0  # Deterministic — evidence analysis, not creative writing
 
@@ -69,12 +72,14 @@ _groq_client: Optional[OpenAI] = None
 def _get_groq_client() -> OpenAI:
     global _groq_client
     if _groq_client is None:
-        if not GROQ_API_KEY:
+        settings = get_settings()
+        api_key = settings.GROQ_API_KEY or os.getenv("GROQ_API_KEY", "")
+        if not api_key:
             raise ValueError(
                 "GROQ_API_KEY not set. Add it to .env file as GROQ_API_KEY=gsk_..."
             )
         _groq_client = OpenAI(
-            api_key=GROQ_API_KEY,
+            api_key=api_key,
             base_url=GROQ_BASE_URL,
         )
     return _groq_client
@@ -289,6 +294,25 @@ def run_heimdall(
             + "\n".join(f"  - {cat}" for cat in send_back_categories)
         )
 
+    # Initial evidence retrieval
+    initial_docs_context = ""
+    try:
+        docs = search_docs(
+            query=question[:120],
+            as_of=as_of,
+            top_k=5,
+        )
+        if docs:
+            initial_docs_context = "\n\nRETRIEVED CORPUS DOCUMENTS (evidence candidates):\n"
+            for d in docs:
+                initial_docs_context += (
+                    f"  Doc ID: {d.get('doc_id')} | Tier: {d.get('reliability_tier', 'T3')} | Date: {d.get('pub_date')}\n"
+                    f"  Title: {d.get('title')}\n"
+                    f"  Content snippet: {d.get('content', '')[:300]}\n\n"
+                )
+    except Exception as e:
+        _audit("initial_search_error", {"error": str(e)})
+
     user_prompt = f"""
 CASE ID: {case_id}
 RUN: {run_no}
@@ -299,23 +323,21 @@ USER QUESTION:
 {question}
 {memory_context}
 {send_back_context}
+{initial_docs_context}
 
 INSTRUCTIONS:
 1. Extract scope (event name, event ID, as-of date, countries, sectors, trade flows).
-2. Search for evidence using the tools described in your prompt.
-3. Verify the event as real / rumour / unverifiable.
-4. Build the evidence index.
-5. Report ingest quality.
-6. Identify evidence gaps.
-7. Return ONLY valid JSON matching the schema in section 17 of your prompt.
+2. Verify the event as real / rumour / unverifiable based on the evidence.
+3. Build the evidence index and report ingest quality.
+4. Identify evidence gaps and decide wake_next.
+5. Return ONLY a single valid JSON object matching the schema in section 17 of your prompt.
 
 CRITICAL RULES:
+- Do NOT output any markdown commentary, preambles, or XML tags (such as <tool_call>).
+- Output MUST be valid, parseable JSON conforming to HeimdallOutput.
 - Do NOT use any date after {as_of_date or "the as-of date you find"} as evidence.
-- Do NOT invent document IDs, dates, entity names, or citations.
 - Every factual claim must cite a real DOC-ID or TABLE-ID#row.
 - Do NOT estimate exposure magnitude (that is Thor and Loki's job).
-- Do NOT plan for another agent.
-- Distinguish sourced facts from inferences clearly.
 """
 
     groq = _get_groq_client()
@@ -338,6 +360,8 @@ CRITICAL RULES:
     except Exception as e:
         _audit("llm_call_failed", {"error": str(e), "traceback": traceback.format_exc()[:500]})
         return _make_failed_output(
+            case_id=case_id,
+            event_name=event_id or "Unverified Event",
             run_no=run_no,
             reason=f"LLM call failed: {e}",
             audit_events=audit_events,
@@ -351,11 +375,17 @@ CRITICAL RULES:
     if raw_output is None:
         _audit("json_parse_failed", {"raw_response_preview": llm_response_text[:500]})
         return _make_failed_output(
+            case_id=case_id,
+            event_name=event_id or "Unverified Event",
             run_no=run_no,
             reason="LLM did not return valid JSON.",
             audit_events=audit_events,
             memory_actions=memory_actions,
         )
+
+    # Ensure case_id and event_name exist
+    raw_output.setdefault("case_id", case_id)
+    raw_output.setdefault("event_name", event_id or "Unverified Event")
 
     # Validate through Pydantic
     try:
@@ -363,7 +393,7 @@ CRITICAL RULES:
     except ValidationError as e:
         _audit("schema_validation_failed", {"errors": str(e)[:500]})
         # Try to salvage what we can
-        output = _salvage_partial_output(raw_output, run_no, audit_events, memory_actions)
+        output = _salvage_partial_output(raw_output, case_id, event_id or "Unverified Event", run_no, audit_events, memory_actions)
 
     # ------------------------------------------------------------------
     # Step 4: Enforce hard rules post-LLM
@@ -534,14 +564,16 @@ CRITICAL RULES:
 # ---------------------------------------------------------------------------
 
 def _make_failed_output(
+    case_id: str,
+    event_name: str,
     run_no: int,
     reason: str,
     audit_events: List[AuditEvent],
     memory_actions: List[MemoryAction],
 ) -> HeimdallOutput:
     return HeimdallOutput(
-        agent="heimdall",
-        run_no=run_no,
+        case_id=case_id,
+        event_name=event_name,
         status="failed",
         verification=VerificationResult(
             verdict="unverifiable",
@@ -551,9 +583,8 @@ def _make_failed_output(
         evidence_gaps=[reason],
         audit_events=audit_events + [AuditEvent(
             event_type="heimdall_failed",
-            agent="heimdall",
-            run_no=run_no,
-            details={"reason": reason},
+            actor="heimdall",
+            details={"reason": reason, "run_no": run_no},
             timestamp=datetime.now(timezone.utc).isoformat(),
         )],
         memory_actions=memory_actions,
@@ -563,14 +594,16 @@ def _make_failed_output(
 
 def _salvage_partial_output(
     raw: Dict[str, Any],
+    case_id: str,
+    event_name: str,
     run_no: int,
     audit_events: List[AuditEvent],
     memory_actions: List[MemoryAction],
 ) -> HeimdallOutput:
     """Try to salvage a partial LLM output that failed strict Pydantic validation."""
     output = HeimdallOutput(
-        agent="heimdall",
-        run_no=run_no,
+        case_id=case_id,
+        event_name=raw.get("event_name") or event_name,
         status="incomplete",
         audit_events=audit_events,
         memory_actions=memory_actions,

@@ -1,5 +1,11 @@
 from src.tools.citation_tools import CitationValidator, get_citation_validator
-from src.tools.registry import AgentToolRegistry, get_tool_registry
+
+try:
+    from src.tools.registry import AgentToolRegistry, get_tool_registry
+except ImportError:
+    AgentToolRegistry = None  # Requires optional dependencies (e.g. google-genai)
+    get_tool_registry = None
+
 from src.tools.heimdall_tools import (
     search_docs,
     get_doc,

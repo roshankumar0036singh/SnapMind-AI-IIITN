@@ -203,11 +203,13 @@ class EvidenceIndexEntry(BaseModel):
     topic: str = ""
     summary: str = ""
     exact_quote: str = ""
+    ref: Optional[str] = None
     chunk_id: Optional[str] = None
     table_id: Optional[str] = None
     usable: bool = True
     reliability_weight: float = 0.5
     quarantine_reason: Optional[str] = None
+    warnings: List[str] = Field(default_factory=list)
     tags: List[str] = Field(default_factory=list)
 
     @field_validator("reliability_weight")
