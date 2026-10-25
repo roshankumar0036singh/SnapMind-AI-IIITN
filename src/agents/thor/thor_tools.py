@@ -1,73 +1,152 @@
-from typing import List, Dict, Any, Optional
-from src.tools.retrieval_tools import RetrievalTools
-from src.tools.trade_tools import TradeTools
-from src.schemas.case_file import CaseFile
+"""
+src/agents/thor/thor_tools.py
+=============================
+Thor-specific autonomous search and trade math pipeline.
+Focuses on: severe bottlenecks, port shutdowns, blockades, capacity drops, and trade troughs.
+"""
+
+from datetime import date
+from typing import Any, Dict, List, Optional
+
+from src.schemas.retrieval import SearchFilters, SearchResultItem
+from src.schemas.trade import MetricCalculationResult
+from src.tools.registry import AgentToolRegistry
+
 
 class ThorToolsBinding:
     """
-    Thor-specific tool binding and autonomous lookup engine:
-    Focuses on: severe bottlenecks, naval blockades, port closures, trade volume drops.
+    Autonomous evidence gatherer for Thor (The Alarm).
+    Executes hybrid search and trade math via the AgentToolRegistry.
     """
-    def __init__(self):
-        self.retrieval = RetrievalTools()
-        self.trade = TradeTools()
 
-    def gather_round1_evidence(self, case: CaseFile, max_tier: int = 4) -> Dict[str, Any]:
+    def __init__(self, registry: AgentToolRegistry):
+        self.registry = registry
+
+    def gather_high_exposure_evidence(
+        self,
+        question: str,
+        as_of_date: date,
+        country: Optional[str] = None,
+        sector: Optional[str] = None,
+        event_id: Optional[str] = None,
+        max_tier: int = 4,
+        top_k: int = 6,
+    ) -> List[SearchResultItem]:
         """
-        Thor's Round 1 lookup sweep:
-        1. Searches hybrid index for severe disruption, closures, and bottlenecks.
-        2. Queries trade tables to identify maximum drop / trough percentage.
+        Executes hybrid document search focusing on high-exposure angles:
+        port closures, structural damage, capacity loss, supply shortages, price surges.
         """
-        as_of = case.as_of
-        countries = case.scope.countries if case.scope else []
-        sectors = case.scope.sectors if case.scope else []
-
-        # Formulate Thor-oriented search queries
-        query = f"blockade shutdown capacity loss disruption bottleneck {case.question}"
-        country_filter = countries[0] if countries else None
-        sector_filter = sectors[0] if sectors else None
-
-        docs = self.retrieval.search_docs(
-            query=query,
-            as_of_date=as_of,
-            country=country_filter,
-            sector=sector_filter,
-            max_tier=max_tier,
-            match_count=10,
-            rerank_top_k=5
+        query_text = (
+            f"closure shutdown blockade damage capacity loss crisis drop bottleneck {question}"
+        )
+        filters = SearchFilters(
+            as_of_date=as_of_date,
+            country=country,
+            sector=sector,
+            event_id=event_id,
+            tier_max=max_tier,
+            exclude_retracted=True,
+            exclude_damaged=True,
+            exclude_injections=True,
         )
 
-        # Formulate trade table lookups (searching for lowest drop)
-        tables = self.trade.find_tables(country=country_filter, sector=sector_filter)
-        trade_calculations = []
-
-        for tbl in tables[:2]:  # Check first 2 matching tables
-            calc = self.trade.compute_change(
-                table_id=tbl["table_id"],
-                baseline_start="2025-01-01",
-                baseline_end="2025-12-31",
-                comparison_start="2026-01-01",
-                comparison_end=as_of,
-                as_of_date=as_of,
-                metric="volume"
+        try:
+            results = self.registry.execute_tool(
+                "thor",
+                "search_docs",
+                query_text=query_text,
+                filters=filters,
+                top_k=top_k,
             )
-            if "error" not in calc:
-                trade_calculations.append(calc)
+            return results or []
+        except Exception as e:
+            print(f"[ThorTools] search_docs error: {e}")
+            return []
 
-        return {
-            "documents": docs,
-            "trade_calculations": trade_calculations
-        }
+    def compute_worst_case_trade_decline(
+        self,
+        sector: Optional[str] = None,
+        country_pair: Optional[str] = None,
+        as_of_date: Optional[date] = None,
+    ) -> List[Dict[str, Any]]:
+        """
+        Queries trade tables and executes compute_change to locate the steepest drop.
+        """
+        calculations: List[Dict[str, Any]] = []
+        try:
+            tables = self.registry.execute_tool(
+                "thor",
+                "find_tables",
+                sector=sector,
+                country_pair=country_pair,
+            )
 
-    def gather_defence_evidence(self, case: CaseFile, attacked_topic: str, max_tier: int = 3) -> List[Dict[str, Any]]:
+            if not tables:
+                return []
+
+            # Examine candidate tables (up to 2)
+            for tbl in tables[:2]:
+                table_id = tbl.get("table_id")
+                if not table_id:
+                    continue
+
+                # Compute baseline (prior 12 months) vs post-event drop
+                res: MetricCalculationResult = self.registry.execute_tool(
+                    "thor",
+                    "compute_change",
+                    table_id=table_id,
+                    baseline_window=("2025-01", "2025-12"),
+                    comparison_window=("2026-01", "2026-06"),
+                    metric="volume",
+                    as_of_date=as_of_date,
+                )
+
+                if res and res.status == "success":
+                    calculations.append({
+                        "table_id": table_id,
+                        "metric": res.metric,
+                        "percentage_change": res.percentage_change,
+                        "baseline_average": res.baseline_average,
+                        "comparison_average": res.comparison_average,
+                        "citations": res.citations,
+                        "rows_used": res.rows_used,
+                        "rows_excluded": res.rows_excluded,
+                    })
+
+        except Exception as e:
+            print(f"[ThorTools] compute_worst_case_trade_decline error: {e}")
+
+        return calculations
+
+    def search_counter_evidence(
+        self,
+        dispute_topic: str,
+        as_of_date: date,
+        max_tier: int = 3,
+        top_k: int = 4,
+    ) -> List[SearchResultItem]:
         """
-        Thor searches for NEW evidence to counter Loki's attacks during Round 2.
+        Retrieves fresh counter-evidence for Round 2 attacks on Loki's resilience claims.
         """
-        query = f"congestion freight cost physical damage persistent decline {attacked_topic}"
-        return self.retrieval.search_docs(
-            query=query,
-            as_of_date=case.as_of,
-            max_tier=max_tier,
-            match_count=6,
-            rerank_top_k=3
+        query_text = (
+            f"congested overwhelmed rail capacity limitation transit cost physical bottleneck {dispute_topic}"
         )
+        filters = SearchFilters(
+            as_of_date=as_of_date,
+            tier_max=max_tier,
+            exclude_retracted=True,
+            exclude_damaged=True,
+            exclude_injections=True,
+        )
+
+        try:
+            return self.registry.execute_tool(
+                "thor",
+                "search_docs",
+                query_text=query_text,
+                filters=filters,
+                top_k=top_k,
+            ) or []
+        except Exception as e:
+            print(f"[ThorTools] search_counter_evidence error: {e}")
+            return []

@@ -1,73 +1,153 @@
-from typing import List, Dict, Any, Optional
-from src.tools.retrieval_tools import RetrievalTools
-from src.tools.trade_tools import TradeTools
-from src.schemas.case_file import CaseFile
+"""
+src/agents/loki/loki_tools.py
+=============================
+Loki-specific autonomous search and trade math pipeline.
+Focuses on: commercial resilience, alternative routes, rail substitution,
+inventory buffers, recovery trends, and supplier diversification.
+"""
+
+from datetime import date
+from typing import Any, Dict, List, Optional
+
+from src.schemas.retrieval import SearchFilters, SearchResultItem
+from src.schemas.trade import MetricCalculationResult
+from src.tools.registry import AgentToolRegistry
+
 
 class LokiToolsBinding:
     """
-    Loki-specific tool binding and autonomous lookup engine:
-    Focuses on: commercial resilience, overland rail substitution, secondary ports,
-    inventory reserves, and supplier diversification.
+    Autonomous evidence gatherer for Loki (The Trickster).
+    Executes hybrid search and trade math via the AgentToolRegistry.
     """
-    def __init__(self):
-        self.retrieval = RetrievalTools()
-        self.trade = TradeTools()
 
-    def gather_round1_evidence(self, case: CaseFile, max_tier: int = 4) -> Dict[str, Any]:
+    def __init__(self, registry: AgentToolRegistry):
+        self.registry = registry
+
+    def gather_resilience_evidence(
+        self,
+        question: str,
+        as_of_date: date,
+        country: Optional[str] = None,
+        sector: Optional[str] = None,
+        event_id: Optional[str] = None,
+        max_tier: int = 4,
+        top_k: int = 6,
+    ) -> List[SearchResultItem]:
         """
-        Loki's Round 1 lookup sweep:
-        1. Searches hybrid index for resilience, substitution, rail rerouting, and inventory buffers.
-        2. Queries trade tables to identify overland spikes or alternative route volume.
+        Executes hybrid document search focusing on limited-exposure and resilience angles:
+        alternative rail routes, secondary ports, emergency stockpiles, inventory buffers,
+        tariffs waived, commercial substitution.
         """
-        as_of = case.as_of
-        countries = case.scope.countries if case.scope else []
-        sectors = case.scope.sectors if case.scope else []
-
-        # Formulate Loki-oriented search queries
-        query = f"alternative route rail substitution stockpile inventory recovery reserve {case.question}"
-        sector_filter = sectors[0] if sectors else None
-
-        docs = self.retrieval.search_docs(
-            query=query,
-            as_of_date=as_of,
-            country=None,  # Intentionally broad to catch alternative neighboring suppliers
-            sector=sector_filter,
-            max_tier=max_tier,
-            match_count=10,
-            rerank_top_k=5
+        query_text = (
+            f"alternative route rail substitution stockpile inventory reserve recovery buffer {question}"
+        )
+        # Broaden country filter slightly to find neighboring alternative supplier routes
+        filters = SearchFilters(
+            as_of_date=as_of_date,
+            country=country,
+            sector=sector,
+            event_id=event_id,
+            tier_max=max_tier,
+            exclude_retracted=True,
+            exclude_damaged=True,
+            exclude_injections=True,
         )
 
-        # Formulate trade table lookups (searching for replacement route traffic)
-        tables = self.trade.find_tables(sector=sector_filter)
-        trade_calculations = []
-
-        for tbl in tables[:2]:
-            calc = self.trade.compute_change(
-                table_id=tbl["table_id"],
-                baseline_start="2025-01-01",
-                baseline_end="2025-12-31",
-                comparison_start="2026-01-01",
-                comparison_end=as_of,
-                as_of_date=as_of,
-                metric="volume"
+        try:
+            results = self.registry.execute_tool(
+                "loki",
+                "search_docs",
+                query_text=query_text,
+                filters=filters,
+                top_k=top_k,
             )
-            if "error" not in calc:
-                trade_calculations.append(calc)
+            return results or []
+        except Exception as e:
+            print(f"[LokiTools] search_docs error: {e}")
+            return []
 
-        return {
-            "documents": docs,
-            "trade_calculations": trade_calculations
-        }
+    def compute_substitution_or_recovery(
+        self,
+        sector: Optional[str] = None,
+        country_pair: Optional[str] = None,
+        as_of_date: Optional[date] = None,
+    ) -> List[Dict[str, Any]]:
+        """
+        Queries trade tables to find recovery signals or volume increases along replacement corridors.
+        """
+        calculations: List[Dict[str, Any]] = []
+        try:
+            tables = self.registry.execute_tool(
+                "loki",
+                "find_tables",
+                sector=sector,
+                country_pair=country_pair,
+            )
 
-    def gather_defence_evidence(self, case: CaseFile, attacked_topic: str, max_tier: int = 3) -> List[Dict[str, Any]]:
+            if not tables:
+                return []
+
+            for tbl in tables[:2]:
+                table_id = tbl.get("table_id")
+                if not table_id:
+                    continue
+
+                res: MetricCalculationResult = self.registry.execute_tool(
+                    "loki",
+                    "compute_change",
+                    table_id=table_id,
+                    baseline_window=("2025-01", "2025-12"),
+                    comparison_window=("2026-01", "2026-06"),
+                    metric="volume",
+                    as_of_date=as_of_date,
+                )
+
+                if res and res.status == "success":
+                    calculations.append({
+                        "table_id": table_id,
+                        "metric": res.metric,
+                        "percentage_change": res.percentage_change,
+                        "baseline_average": res.baseline_average,
+                        "comparison_average": res.comparison_average,
+                        "citations": res.citations,
+                        "rows_used": res.rows_used,
+                        "rows_excluded": res.rows_excluded,
+                    })
+
+        except Exception as e:
+            print(f"[LokiTools] compute_substitution_or_recovery error: {e}")
+
+        return calculations
+
+    def search_counter_evidence(
+        self,
+        dispute_topic: str,
+        as_of_date: date,
+        max_tier: int = 3,
+        top_k: int = 4,
+    ) -> List[SearchResultItem]:
         """
-        Loki searches for NEW evidence to counter Thor's attacks during Round 2.
+        Retrieves fresh counter-evidence for Round 2 attacks on Thor's alarmist claims.
         """
-        query = f"overland capacity expansion tariff waiver domestic stockpile {attacked_topic}"
-        return self.retrieval.search_docs(
-            query=query,
-            as_of_date=case.as_of,
-            max_tier=max_tier,
-            match_count=6,
-            rerank_top_k=3
+        query_text = (
+            f"overland expansion inventory release domestic reserve partial recovery {dispute_topic}"
         )
+        filters = SearchFilters(
+            as_of_date=as_of_date,
+            tier_max=max_tier,
+            exclude_retracted=True,
+            exclude_damaged=True,
+            exclude_injections=True,
+        )
+
+        try:
+            return self.registry.execute_tool(
+                "loki",
+                "search_docs",
+                query_text=query_text,
+                filters=filters,
+                top_k=top_k,
+            ) or []
+        except Exception as e:
+            print(f"[LokiTools] search_counter_evidence error: {e}")
+            return []
