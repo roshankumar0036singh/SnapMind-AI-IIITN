@@ -98,6 +98,19 @@ async def run_e5_trial():
         print(f"  * {r}")
     print(f"Heimdall signal: Case approved for Thor and Loki simultaneous wake-up.")
 
+    # ---------------------------------------------------------------------------
+    # Step 1.5: Initialize Knowledge Graph
+    # ---------------------------------------------------------------------------
+    from src.graph.store import get_graph_store
+    from src.graph.extractor import bootstrap_runemark_knowledge_graph
+    graph_store = get_graph_store()
+    if len(graph_store.nodes_data) == 0:
+        bootstrap_runemark_knowledge_graph(graph_store)
+
+    print_section("GRAPH RAG: DUAL-LEVEL KNOWLEDGE GRAPH ACTIVE")
+    print(f"Graph Store: Loaded ({len(graph_store.nodes_data)} nodes, {len(graph_store.edges_data)} typed edges)")
+    print(f"Temporal Gate: as_of <= {as_of} | Trap Exclusion: Active | Bi-temporal Cutoff Enforced")
+
     # Instantiate Agents
     thor = ThorAgent()
     loki = LokiAgent()
@@ -105,10 +118,10 @@ async def run_e5_trial():
     # ---------------------------------------------------------------------------
     # Step 2: Round 1 -- Concurrent Autonomous Search & Claim Synthesis
     # ---------------------------------------------------------------------------
-    print_section("PHASE 2: ROUND 1 -- PARALLEL EMBEDDING SEARCH & CLAIM SYNTHESIS")
+    print_section("PHASE 2: ROUND 1 -- DUAL-LEVEL GRAPH RAG & CLAIM SYNTHESIS")
     print("Executing Thor and Loki concurrently via asyncio.gather()...")
-    print("  * Thor querying Supabase for: closures, blockades, capacity drops, maritime deficits...")
-    print("  * Loki querying Supabase for: alternative rail corridors, inventory stockpiles, commercial substitution...")
+    print("  * Thor traversing Knowledge Graph for bottlenecks & querying Supabase embeddings...")
+    print("  * Loki traversing Knowledge Graph for substitutions & querying Supabase embeddings...")
 
     thor_r1_task = asyncio.create_task(thor.act(case))
     loki_r1_task = asyncio.create_task(loki.act(case))

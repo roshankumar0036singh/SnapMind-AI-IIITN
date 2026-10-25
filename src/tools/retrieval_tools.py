@@ -136,3 +136,55 @@ class RetrievalTools:
         except Exception as e:
             print(f"[Retrieval] get_doc failed for {doc_id}: {e}")
             return None
+
+    def search_graph(
+        self,
+        country: str,
+        sector: Optional[str] = None,
+        as_of_date: Optional[str] = None,
+        max_depth: int = 2,
+    ) -> Dict[str, Any]:
+        """Query knowledge graph local ego-network around country and sector."""
+        from datetime import date
+        from src.retrieval.graph_retriever import get_graph_retriever
+        as_of = date.fromisoformat(as_of_date) if as_of_date else None
+        res = get_graph_retriever().retrieve_local_subgraph(
+            country=country,
+            sector=sector,
+            as_of_date=as_of,
+            max_depth=max_depth,
+        )
+        return res.model_dump(mode="json")
+
+    def find_supply_chain_paths(
+        self,
+        target_country: str,
+        source_event: Optional[str] = None,
+        as_of_date: Optional[str] = None,
+    ) -> List[Dict[str, Any]]:
+        """Find causal supply-chain and disruption paths connecting event to nation."""
+        from datetime import date
+        from src.retrieval.graph_retriever import get_graph_retriever
+        as_of = date.fromisoformat(as_of_date) if as_of_date else None
+        paths = get_graph_retriever().retrieve_causal_paths(
+            target_country=target_country,
+            source_event=source_event,
+            as_of_date=as_of,
+        )
+        return [p.model_dump(mode="json") for p in paths]
+
+    def get_bottlenecks_and_substitutions(
+        self,
+        country: str,
+        sector: Optional[str] = None,
+        as_of_date: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Retrieve both capacity bottlenecks and active substitution routes."""
+        from datetime import date
+        from src.graph.store import get_graph_store
+        as_of = date.fromisoformat(as_of_date) if as_of_date else None
+        store = get_graph_store()
+        return {
+            "bottlenecks": store.detect_bottlenecks(target_country=country, sector=sector, as_of_date=as_of),
+            "substitutions": store.detect_substitutions(target_country=country, sector=sector, as_of_date=as_of),
+        }
