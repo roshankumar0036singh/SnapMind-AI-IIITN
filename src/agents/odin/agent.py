@@ -119,12 +119,14 @@ class OdinJudge:
             "missing": missing_categories,
         }
 
-        # 5. Handle Send-Back vs Briefing Approval
-        if sufficiency_status == "send_back":
+        # 5. Handle Insufficient Evidence vs Briefing Approval
+        # NOTE: Odin records the finding but does NOT decide to continue the debate.
+        # The runner (trial_workflow.py) owns that decision based on budget state.
+        if sufficiency_status == "insufficient":
             # Record audit event
             record_event(
                 case_id=case_file.case_id,
-                event_type="odin_send_back_issued",
+                event_type="odin_insufficient_evidence",
                 agent="odin",
                 run_no=active_run.run_no,
                 details={
@@ -146,7 +148,7 @@ class OdinJudge:
             except Exception:
                 pass
 
-            result_summary["action"] = "send_back"
+            result_summary["action"] = "insufficient"
             return case_file, result_summary
 
         # 6. Phase 5: Evidence is sufficient -> compile final briefing & export deliverables

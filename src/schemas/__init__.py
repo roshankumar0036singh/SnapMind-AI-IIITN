@@ -59,6 +59,13 @@ from src.schemas.case_file import (
     AuditEvent,
     HeimdallOutput,
 )
+from src.schemas.debate import (
+    DebateBudget,
+    DebateTerminationState,
+    DebateTerminationReason,
+    DebatePhase,
+    DebateTurnRecord,
+)
 from src.schemas.graph import (
     EntityType,
     RelationType,
@@ -131,4 +138,10 @@ __all__ = [
     "MemoryAction",
     "AuditEvent",
     "HeimdallOutput",
+    # Debate Convergence
+    "DebateBudget",
+    "DebateTerminationState",
+    "DebateTerminationReason",
+    "DebatePhase",
+    "DebateTurnRecord",
 ]
