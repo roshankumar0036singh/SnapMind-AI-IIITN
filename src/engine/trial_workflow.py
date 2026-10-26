@@ -582,6 +582,52 @@ def run_debate_agents(case: CaseFile, run_no: int = 1) -> Dict[str, Any]:
     return _run_coro(_execute_debate_cycles(case, run_no))
 
 
+async def run_thor_and_loki_debate(case: CaseFile) -> CaseFile:
+    """
+    Executes adversarial debate cycles between Thor and Loki, followed by
+    Odin's judicial adjudication, findings classification, and briefing generation.
+    """
+    await _execute_debate_cycles(case, run_no=1)
+
+    print_banner("PHASE 3: ODIN SUPREME JUDICIAL EVALUATION & BRIEFING")
+    case, odin_res = run_odin(case, run_no=1)
+
+    # Print Odin Findings Classification
+    active_run = case.runs[-1] if case.runs else None
+    if active_run and active_run.classification:
+        print_section("ODIN'S CLASSIFICATION OF CLAIMS")
+        cls = active_run.classification
+        print(f"  [ESTABLISHED ({len(cls.established)})]:")
+        for cid in cls.established:
+            claim_match = next((c for c in active_run.claims if c.claim_id == cid), None)
+            text_preview = f" - {claim_match.text[:90]}..." if claim_match else ""
+            print(f"    * {cid}{text_preview}")
+        if not cls.established:
+            print("    * (None)")
+
+        print(f"\n  [CONTESTED ({len(cls.contested)})]:")
+        for cid in cls.contested:
+            claim_match = next((c for c in active_run.claims if c.claim_id == cid), None)
+            text_preview = f" - {claim_match.text[:90]}..." if claim_match else ""
+            print(f"    * {cid}{text_preview}")
+        if not cls.contested:
+            print("    * (None)")
+
+        print(f"\n  [CONCEDED ({len(cls.conceded)})]:")
+        for cid in cls.conceded:
+            claim_match = next((c for c in active_run.claims if c.claim_id == cid), None)
+            text_preview = f" - {claim_match.text[:90]}..." if claim_match else ""
+            print(f"    * {cid}{text_preview}")
+        if not cls.conceded:
+            print("    * (None)")
+
+    if case.final_briefing:
+        print_section("ODIN FINAL EXECUTIVE BRIEFING")
+        _safe_print(case.final_briefing)
+
+    return case
+
+
 def run_odin(case: CaseFile, run_no: int = 1) -> Any:
     """
     Executes Odin's judicial evaluation for the given run.

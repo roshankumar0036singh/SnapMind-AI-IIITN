@@ -174,7 +174,7 @@ def main():
                     supporting_docs=getattr(output.verification, "supporting_refs", []),
                     message_to_user="Disruption event confirmed real. Case approved for debate.",
                 ),
-                runs=[RunRecord(run_no=1)],
+                runs=[RunRecord(run_no=1, evidence_index=output.evidence_index)],
             )
 
             asyncio.run(run_thor_and_loki_debate(case))
