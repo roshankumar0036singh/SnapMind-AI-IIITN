@@ -133,7 +133,8 @@ export default function SupplyChainTopologyView({ onOpenDoc }) {
 
       {/* Top Topology KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        <div className="linear-panel p-6 flex flex-col justify-between">
+        <div className="modern-card p-6 flex flex-col justify-between relative overflow-hidden group">
+          <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-slate-400/60 to-transparent" />
           <div className="text-xs font-mono uppercase tracking-wider text-slate-400">
             Graph Knowledge Nodes
           </div>
@@ -145,11 +146,12 @@ export default function SupplyChainTopologyView({ onOpenDoc }) {
           </div>
         </div>
 
-        <div className="linear-panel p-6 flex flex-col justify-between">
-          <div className="text-xs font-mono uppercase tracking-wider text-slate-400">
+        <div className="modern-card-highlight p-6 flex flex-col justify-between relative overflow-hidden group">
+          <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-indigo-500 to-transparent" />
+          <div className="text-xs font-mono uppercase tracking-wider text-indigo-300">
             Directed Relationship Edges
           </div>
-          <div className="my-3 text-2xl sm:text-3xl font-bold font-mono text-indigo-400 tabular-nums">
+          <div className="my-3 text-2xl sm:text-3xl font-bold font-mono text-indigo-300 tabular-nums">
             {graphData?.total_edges || 7} Grounded Edges
           </div>
           <div className="text-xs text-slate-400">
@@ -157,8 +159,9 @@ export default function SupplyChainTopologyView({ onOpenDoc }) {
           </div>
         </div>
 
-        <div className="linear-panel p-6 flex flex-col justify-between">
-          <div className="text-xs font-mono uppercase tracking-wider text-slate-400">
+        <div className="modern-card p-6 flex flex-col justify-between relative overflow-hidden group">
+          <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-emerald-500/80 to-transparent" />
+          <div className="text-xs font-mono uppercase tracking-wider text-emerald-300">
             Multi-Hop Causal Paths
           </div>
           <div className="my-3 text-2xl sm:text-3xl font-bold font-mono text-emerald-400 tabular-nums">
@@ -169,8 +172,9 @@ export default function SupplyChainTopologyView({ onOpenDoc }) {
           </div>
         </div>
 
-        <div className="linear-panel p-6 flex flex-col justify-between">
-          <div className="text-xs font-mono uppercase tracking-wider text-slate-400">
+        <div className="modern-card p-6 flex flex-col justify-between relative overflow-hidden group">
+          <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-cyan-500/80 to-transparent" />
+          <div className="text-xs font-mono uppercase tracking-wider text-cyan-300">
             Temporal Clock Filtering
           </div>
           <div className="my-3 text-2xl sm:text-3xl font-bold font-mono text-slate-200 tabular-nums">
@@ -183,11 +187,11 @@ export default function SupplyChainTopologyView({ onOpenDoc }) {
       </div>
 
       {/* INTERACTIVE SVG SUPPLY CHAIN TOPOLOGY NETWORK */}
-      <div className="linear-panel p-6 overflow-hidden">
-        <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-white/[0.08]">
-          <div className="flex items-center gap-2">
+      <div className="modern-card p-6 sm:p-7 overflow-hidden">
+        <div className="flex flex-wrap items-center justify-between gap-3 pb-5 border-b border-white/[0.08]">
+          <div className="flex items-center gap-2.5">
             <span className="w-2 h-2 rounded-full bg-indigo-400 pulse-glow"></span>
-            <h3 className="text-sm font-semibold text-white font-sans">
+            <h3 className="text-sm sm:text-base font-semibold text-white font-sans">
               Interactive Causal Flow Network (Click Any Node to Inspect)
             </h3>
           </div>
@@ -372,37 +376,37 @@ export default function SupplyChainTopologyView({ onOpenDoc }) {
 
         {/* Selected Node Inspector Drawer Strip */}
         {inspectedNode && nodeCatalog[inspectedNode] && (
-          <div className="mt-2 p-4 rounded-xl bg-white/[0.03] border border-white/[0.08] flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-fade-in">
-            <div className="flex items-start sm:items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center shrink-0">
-                <Info className="w-4 h-4 text-indigo-400" />
+          <div className="mt-4 p-5 rounded-xl bg-white/[0.03] border border-white/[0.08] flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-fade-in backdrop-blur-md">
+            <div className="flex items-start sm:items-center gap-4">
+              <div className="w-10 h-10 rounded-xl bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center shrink-0">
+                <Info className="w-5 h-5 text-indigo-400" />
               </div>
               <div>
-                <div className="flex items-center gap-2">
-                  <h4 className="text-xs font-mono font-bold text-white uppercase">{inspectedNode}</h4>
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-white/[0.06] text-slate-300">
+                <div className="flex items-center gap-2.5">
+                  <h4 className="text-sm font-mono font-bold text-white uppercase tracking-wide">{inspectedNode}</h4>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white/[0.06] text-slate-300 border border-white/[0.08]">
                     {nodeCatalog[inspectedNode].type}
                   </span>
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 font-semibold">
+                  <span className="text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 font-semibold border border-indigo-500/30">
                     {nodeCatalog[inspectedNode].status}
                   </span>
                 </div>
-                <p className="text-xs text-slate-300 mt-1 font-sans leading-relaxed">
+                <p className="text-xs text-slate-300 mt-1.5 font-sans leading-relaxed max-w-2xl">
                   {nodeCatalog[inspectedNode].desc}
                 </p>
               </div>
             </div>
 
             <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto font-mono text-xs">
-              <span className="text-slate-500 text-[11px]">Sourced In:</span>
+              <span className="text-slate-400 text-[11px]">Sourced In:</span>
               {nodeCatalog[inspectedNode].citations.map((cite, i) => (
                 <button
                   key={i}
                   onClick={() => onOpenDoc(cite)}
-                  className="px-2 py-0.5 rounded bg-white/[0.06] hover:bg-white/[0.12] border border-white/[0.1] text-indigo-300 transition flex items-center gap-1"
+                  className="px-2.5 py-1 rounded-lg bg-white/[0.04] hover:bg-indigo-500/20 border border-white/[0.08] hover:border-indigo-500/30 text-indigo-300 hover:text-white transition flex items-center gap-1.5 shadow-2xs"
                 >
                   <span>{cite}</span>
-                  <ExternalLink className="w-2.5 h-2.5 text-slate-500" />
+                  <ExternalLink className="w-3 h-3 text-slate-500" />
                 </button>
               ))}
             </div>
@@ -420,15 +424,15 @@ export default function SupplyChainTopologyView({ onOpenDoc }) {
           {pathsToShow.map((p, idx) => (
             <div
               key={idx}
-              className="linear-panel p-6 sm:p-7 flex flex-col gap-4 hover:border-white/[0.16] transition"
+              className="modern-card p-6 sm:p-7 flex flex-col gap-4 hover:border-white/[0.18] transition shadow-lg"
             >
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <span className="font-mono text-xs font-bold text-white">
+                  <span className="font-mono text-xs font-bold text-white tracking-wide">
                     Path #{idx + 1}: {p.summary}
                   </span>
                   <span
-                    className={`px-2.5 py-0.5 rounded text-xs font-mono uppercase font-semibold ${
+                    className={`px-2.5 py-0.5 rounded-full text-[11px] font-mono uppercase font-semibold ${
                       p.is_bottleneck
                         ? "bg-rose-500/10 text-rose-400 border border-rose-500/25"
                         : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/25"
@@ -445,10 +449,10 @@ export default function SupplyChainTopologyView({ onOpenDoc }) {
                     <button
                       key={cIdx}
                       onClick={() => onOpenDoc(c)}
-                      className="px-2 py-0.5 rounded bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.1] text-xs font-mono text-indigo-300 transition flex items-center gap-1"
+                      className="px-2.5 py-1 rounded-lg bg-white/[0.04] hover:bg-indigo-500/20 border border-white/[0.08] hover:border-indigo-500/30 text-xs font-mono text-indigo-300 hover:text-white transition flex items-center gap-1.5 shadow-2xs"
                     >
                       <span>{c}</span>
-                      <ExternalLink className="w-2.5 h-2.5 text-slate-500" />
+                      <ExternalLink className="w-3 h-3 text-slate-500" />
                     </button>
                   ))}
                 </div>
@@ -478,29 +482,36 @@ export default function SupplyChainTopologyView({ onOpenDoc }) {
       {/* Physical Bottlenecks vs Active Substitutions Dual Panel */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Capacity Bottlenecks */}
-        <div className="linear-panel p-6 sm:p-7 flex flex-col gap-4">
+        <div className="modern-card p-6 sm:p-7 flex flex-col gap-4 relative overflow-hidden group">
+          <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-rose-500/70 to-transparent" />
           <div className="flex items-center justify-between pb-3 border-b border-white/[0.06]">
             <span className="text-xs font-mono font-bold uppercase tracking-wider text-rose-400">
               Capacity Bottlenecks Identified
             </span>
-            <span className="text-xs font-mono text-slate-500">Thor Evidence</span>
+            <span className="text-xs font-mono text-slate-400">Thor Evidence</span>
           </div>
 
           <div className="space-y-3">
-            <div className="p-4 rounded-lg bg-rose-500/5 border border-rose-500/20 flex flex-col gap-1.5 text-xs">
+            <div className="p-4 rounded-xl bg-rose-500/5 border border-rose-500/20 flex flex-col gap-1.5 text-xs">
               <div className="flex items-center justify-between">
                 <span className="font-semibold text-rose-300">Orvan Grain Terminal Dock Strike</span>
-                <button onClick={() => onOpenDoc("ORV-0012")} className="font-mono text-indigo-400 hover:underline">ORV-0012</button>
+                <button onClick={() => onOpenDoc("ORV-0012")} className="font-mono text-indigo-300 hover:text-white transition flex items-center gap-1">
+                  <span>ORV-0012</span>
+                  <ExternalLink className="w-3 h-3 text-slate-500" />
+                </button>
               </div>
               <p className="text-slate-300 leading-relaxed text-xs">
                 Deepwater loadings fell from 250k to 84k tonnes in October 2026 before complete corridor lapse.
               </p>
             </div>
 
-            <div className="p-4 rounded-lg bg-rose-500/5 border border-rose-500/20 flex flex-col gap-1.5 text-xs">
+            <div className="p-4 rounded-xl bg-rose-500/5 border border-rose-500/20 flex flex-col gap-1.5 text-xs">
               <div className="flex items-center justify-between">
                 <span className="font-semibold text-rose-300">Tolan South Docks Freezing Spray</span>
-                <button onClick={() => onOpenDoc("ORV-0046")} className="font-mono text-indigo-400 hover:underline">ORV-0046</button>
+                <button onClick={() => onOpenDoc("ORV-0046")} className="font-mono text-indigo-300 hover:text-white transition flex items-center gap-1">
+                  <span>ORV-0046</span>
+                  <ExternalLink className="w-3 h-3 text-slate-500" />
+                </button>
               </div>
               <p className="text-slate-300 leading-relaxed text-xs">
                 Winter sea spray lowers small-craft barge throughput to only 22% during sub-zero months.
@@ -510,29 +521,36 @@ export default function SupplyChainTopologyView({ onOpenDoc }) {
         </div>
 
         {/* Active Substitution Corridors */}
-        <div className="linear-panel p-6 sm:p-7 flex flex-col gap-4">
+        <div className="modern-card p-6 sm:p-7 flex flex-col gap-4 relative overflow-hidden group">
+          <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-emerald-500/70 to-transparent" />
           <div className="flex items-center justify-between pb-3 border-b border-white/[0.06]">
             <span className="text-xs font-mono font-bold uppercase tracking-wider text-emerald-400">
               Commercial Substitution Corridors
             </span>
-            <span className="text-xs font-mono text-slate-500">Loki Evidence</span>
+            <span className="text-xs font-mono text-slate-400">Loki Evidence</span>
           </div>
 
           <div className="space-y-3">
-            <div className="p-4 rounded-lg bg-emerald-500/5 border border-emerald-500/20 flex flex-col gap-1.5 text-xs">
+            <div className="p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/20 flex flex-col gap-1.5 text-xs">
               <div className="flex items-center justify-between">
                 <span className="font-semibold text-emerald-300">Vanir Bilateral Wheat Deliveries</span>
-                <button onClick={() => onOpenDoc("ORV-0027")} className="font-mono text-indigo-400 hover:underline">ORV-0027</button>
+                <button onClick={() => onOpenDoc("ORV-0027")} className="font-mono text-indigo-300 hover:text-white transition flex items-center gap-1">
+                  <span>ORV-0027</span>
+                  <ExternalLink className="w-3 h-3 text-slate-500" />
+                </button>
               </div>
               <p className="text-slate-300 leading-relaxed text-xs">
                 Surged from $18.2M to $36.5M in Q4 2026 under bilateral pact, absorbing $18.3M of maritime deficit.
               </p>
             </div>
 
-            <div className="p-4 rounded-lg bg-emerald-500/5 border border-emerald-500/20 flex flex-col gap-1.5 text-xs">
+            <div className="p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/20 flex flex-col gap-1.5 text-xs">
               <div className="flex items-center justify-between">
                 <span className="font-semibold text-emerald-300">Ravik Overland Rail Freight Slots</span>
-                <button onClick={() => onOpenDoc("ORV-0050")} className="font-mono text-indigo-400 hover:underline">ORV-0050</button>
+                <button onClick={() => onOpenDoc("ORV-0050")} className="font-mono text-indigo-300 hover:text-white transition flex items-center gap-1">
+                  <span>ORV-0050</span>
+                  <ExternalLink className="w-3 h-3 text-slate-500" />
+                </button>
               </div>
               <p className="text-slate-300 leading-relaxed text-xs">
                 Absorbs ~32,000 tonnes/month of bulk grain overland via 4 dedicated daily train slots.
