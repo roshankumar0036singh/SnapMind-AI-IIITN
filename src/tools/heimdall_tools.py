@@ -22,7 +22,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
 from src.supabase_client import get_supabase_admin
@@ -71,7 +71,7 @@ def _scan_for_injection(text: str) -> List[Dict[str, Any]]:
 # Reliability weight computation (Section 15.3)
 # ---------------------------------------------------------------------------
 
-_TIER_WEIGHTS = {1: 1.00, 2: 0.80, 3: 0.60, 4: 0.25}
+_TIER_WEIGHTS: Dict[int, float] = {1: 1.00, 2: 0.80, 3: 0.60, 4: 0.25}
 
 def compute_reliability_weight(
     tier: int,
@@ -219,6 +219,8 @@ def search_docs(
             "exposed", "about", "before", "after", "between", "under", "over", "does", "did",
             "many", "much", "more", "most", "some", "such", "than", "then", "into", "onto",
             "also", "only", "other", "their", "there", "they", "them", "then", "your", "ours",
+            "evaluate", "conduct", "assess", "verify", "rule", "whether", "citing", "claiming",
+            "alert", "breaking", "question", "records", "rule", "ruling", "event", "disruption",
             "january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december",
             "2024", "2025", "2026", "2027", "2028", "2029", "2030"
         }
@@ -226,7 +228,7 @@ def search_docs(
         keywords = [t for t in tokens if len(t) > 3 and t.lower() not in STOPWORDS and not t.isdigit()]
         caps = [t for t in keywords if t[0].isupper() or (t.startswith("E") and any(c.isdigit() for c in t))]
         others = [t for t in keywords if t not in caps]
-        search_terms = (caps + others)[:6]
+        search_terms = (caps + others)[:10]
         if search_terms:
             or_conditions = []
             for t in search_terms:
@@ -242,8 +244,19 @@ def search_docs(
     bm25_q = bm25_q.order("pub_date", desc=True).limit(top_k * 4)
     raw_results = []
 
-    # If an event_id is specified, fetch event-specific candidate documents directly
-    if canonical_filters.get("event_id"):
+    # 1. Execute keyword query first to prioritize relevant evidence
+    for attempt in range(3):
+        try:
+            bm_res = bm25_q.execute().data or []
+            raw_results.extend(bm_res)
+            break
+        except Exception:
+            if attempt < 2:
+                import time
+                time.sleep(0.5 * (attempt + 1))
+
+    # 2. If an event_id is specified and we have fewer than top_k results, supplement with event docs
+    if canonical_filters.get("event_id") and len(raw_results) < top_k * 2:
         try:
             ev_query = db.table("runemark_documents").select(
                 "doc_id, title, content, country, sector, event_id, pub_date, "
@@ -261,25 +274,13 @@ def search_docs(
                 ev_query = ev_query.eq("is_duplicate", False)
             ev_query = ev_query.eq("is_injection_attempt", False)
             ev_res = ev_query.order("pub_date", desc=True).limit(top_k * 2).execute().data or []
-            raw_results.extend(ev_res)
-        except Exception:
-            pass
-
-    for attempt in range(3):
-        try:
-            bm_res = bm25_q.execute().data or []
             existing_ids = {d["doc_id"] for d in raw_results if "doc_id" in d}
-            for d in bm_res:
+            for d in ev_res:
                 if d.get("doc_id") not in existing_ids:
                     raw_results.append(d)
                     existing_ids.add(d.get("doc_id"))
-            break
-        except Exception as e:
-            if attempt == 2:
-                pass
-            else:
-                import time
-                time.sleep(0.5 * (attempt + 1))
+        except Exception:
+            pass
 
     # --- Post-filter: event scope ---
     def _passes_event_filter(doc: Dict[str, Any]) -> bool:
@@ -296,8 +297,21 @@ def search_docs(
 
     filtered = [d for d in raw_results if _passes_event_filter(d)]
 
-    # Prioritize event-specific documents over background profiles
-    filtered.sort(key=lambda d: 0 if (d.get("event_id") or "NONE").upper() not in ("NONE", "") else 1)
+    # Rank by keyword match density so docs matching specific terms appear first
+    def _relevance_score(doc: Dict[str, Any]) -> Tuple[int, str]:
+        title = (doc.get("title") or "").lower()
+        content = (doc.get("content") or "").lower()
+        score = 0
+        for t in search_terms:
+            t_low = t.lower()
+            if t_low in title:
+                score += 3
+            if t_low in content:
+                score += 1
+        ev_bonus = 2 if (doc.get("event_id") or "NONE").upper() not in ("NONE", "") else 0
+        return (score + ev_bonus, str(doc.get("pub_date") or ""))
+
+    filtered.sort(key=_relevance_score, reverse=True)
     # --- Scan retrieved content for injection patterns ---
     results = []
     for doc in filtered[:top_k]:
@@ -780,7 +794,7 @@ def record_event(
             "agent": agent,
             "run_no": run_no,
             "details": json.dumps(details),
-            "created_at": datetime.utcnow().isoformat(),
+            "created_at": datetime.now(timezone.utc).isoformat(),
         }).execute()
     except Exception:
         pass  # Audit log failure must not crash the agent

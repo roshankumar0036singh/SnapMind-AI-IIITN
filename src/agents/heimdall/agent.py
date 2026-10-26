@@ -32,6 +32,12 @@ from openai import OpenAI
 from pydantic import ValidationError
 
 from src.agents.prompts.heimdall_prompt import HEIMDALL_SYSTEM_PROMPT, HEIMDALL_SYNTHESIS_PROMPT
+from src.agents.heimdall.verification import (
+    extract_event_proposition,
+    classify_evidence_relationship,
+    evaluate_verification_verdict,
+    build_verification_reasons,
+)
 from src.schemas.case_file import (
     AuditEvent,
     CaseScope,
@@ -446,17 +452,57 @@ def run_heimdall(
             + "\n".join(f"  - {cat}" for cat in send_back_categories)
         )
 
+    # Proposition pre-extraction for targeted retrieval
+    prop_pre = extract_event_proposition(question, as_of_date=as_of, event_id=event_id)
+
     # Initial evidence retrieval
     initial_docs_context = ""
     docs: List[Dict[str, Any]] = []
     new_found_docs: List[Dict[str, Any]] = []
     try:
+        # Round 1: General question search
         docs = search_docs(
             query=question[:200],
             as_of=as_of,
             event_id=event_id,
-            top_k=8,
+            top_k=6,
         )
+
+        # Round 2: Specific claim & cause search
+        claim_terms = []
+        if prop_pre.get("subject") and prop_pre["subject"] != "Disruption Event":
+            claim_terms.append(prop_pre["subject"])
+        if prop_pre.get("cause"):
+            claim_terms.append(prop_pre["cause"].replace("_", " "))
+        if prop_pre.get("event_type") and prop_pre["event_type"] != "disruption":
+            claim_terms.append(prop_pre["event_type"].replace("_", " "))
+        claim_terms.extend(prop_pre.get("object", []))
+
+        if claim_terms:
+            claim_query = " ".join(claim_terms)
+            claim_docs = search_docs(
+                query=claim_query,
+                as_of=as_of,
+                event_id=event_id,
+                top_k=6,
+            )
+            for cd in claim_docs:
+                if not any(d.get("doc_id") == cd.get("doc_id") for d in docs):
+                    docs.append(cd)
+                    new_found_docs.append(cd)
+
+        # Round 3: Operational status and authority search
+        status_query = f"{prop_pre.get('subject', '')} authority operations berths open closed strike intact notice"
+        status_docs = search_docs(
+            query=status_query,
+            as_of=as_of,
+            event_id=event_id,
+            top_k=6,
+        )
+        for sd in status_docs:
+            if not any(d.get("doc_id") == sd.get("doc_id") for d in docs):
+                docs.append(sd)
+                new_found_docs.append(sd)
 
         # Targeted expansion for Odin send-back missing categories
         if send_back_categories:
@@ -676,15 +722,32 @@ def run_heimdall(
             _audit("llm_gemini_skipped", {"reason": "GEMINI_API_KEY not set"})
 
     if raw_output is None:
-        _audit("llm_call_failed", {"error": str(last_err), "traceback": traceback.format_exc()[:500]})
-        return _make_failed_output(
-            case_id=case_id,
-            event_name=event_id or "Unverified Event",
-            run_no=run_no,
-            reason=f"LLM call failed: {last_err}",
-            audit_events=audit_events,
-            memory_actions=memory_actions,
-        )
+        _audit("llm_call_fallback_deterministic", {"reason": str(last_err)})
+        raw_output = {
+            "case_id": case_id,
+            "event_name": prop_pre.get("subject") or event_id or "Disruption Event",
+            "event_id": event_id,
+            "as_of": as_of_date,
+            "status": "complete",
+            "scope": {
+                "event_id": event_id,
+                "event_name": prop_pre.get("subject") or "Disruption Event",
+                "as_of": as_of_date,
+                "countries": [prop_pre["location"]] if prop_pre.get("location") else [],
+                "sectors": prop_pre.get("object", []),
+                "trade_flows": [],
+                "analysis_window": {"start": None, "end": as_of_date},
+                "scope_status": "complete",
+            },
+            "verification": {
+                "verdict": "unverifiable",
+                "confidence": 0.0,
+                "reasons": [],
+            },
+            "evidence_index": [],
+            "evidence_gaps": [],
+            "wake_next": "none",
+        }
 
     # ------------------------------------------------------------------
     # Step 3: Parse and validate LLM JSON output
@@ -838,24 +901,59 @@ def run_heimdall(
         except Exception:
             pass
 
-    # 4e. Enforce wake_next deterministically
+    # 4e. Deterministic Event Verification Evaluation
+    candidate_doc_list = list(all_candidate_docs.values())
+    prop = extract_event_proposition(
+        question=question,
+        as_of_date=as_of,
+        event_id=output.scope.event_id or detected_event_id,
+        hints={
+            "subject": output.scope.event_name or output.event_name,
+            "location": output.scope.countries[0] if output.scope.countries else None,
+        },
+    )
+    det_eval = evaluate_verification_verdict(
+        question=question,
+        proposition=prop,
+        as_of_date=as_of,
+        retrieved_documents=candidate_doc_list,
+        document_metadata=None,
+        corrections=getattr(output.verification, "corrections", []),
+        retractions=getattr(output.verification, "retractions", []),
+        contradictions=getattr(output.verification, "contradictions", []),
+        evidence_index=compiled_index,
+    )
+
+    # Enforce deterministic verification verdict and proposition metadata
+    output.verification.verdict = det_eval["verdict"]
+    output.verification.confidence = det_eval["confidence"]
+    output.verification.proposition_status = det_eval["proposition_status"]
+    output.verification.proposition = det_eval["proposition"]
+    output.verification.evidence_roles = det_eval["evidence_roles"]
+    output.verification.support_score = det_eval["support_score"]
+    output.verification.contradiction_score = det_eval["contradiction_score"]
+    output.verification.decision_basis = det_eval["decision_basis"]
+    if det_eval["supporting_refs"]:
+        output.verification.supporting_refs = det_eval["supporting_refs"]
+    if det_eval["contradicting_refs"]:
+        output.verification.contradicting_refs = det_eval["contradicting_refs"]
+    if det_eval["reasons"]:
+        output.verification.reasons = det_eval["reasons"]
+
+    # 4f. Enforce wake_next deterministically based on proposition verdict
     verdict = output.verification.verdict
     if verdict == "real":
         output.wake_next = "thor_and_loki"
         _audit("wake_next_enforced", {"verdict": verdict, "wake_next": "thor_and_loki"})
     elif verdict == "unverifiable":
-        if output.evidence_gaps and output.verification.confidence >= 0.3:
-            output.wake_next = "odin"
-            _audit("wake_next_enforced", {"verdict": verdict, "wake_next": "odin"})
-        else:
-            output.wake_next = "none"
-            _audit("wake_next_enforced", {"verdict": verdict, "wake_next": "none"})
+        output.wake_next = "none"
+        _audit("wake_next_enforced", {"verdict": verdict, "wake_next": "none"})
     else:  # rumour
         output.wake_next = "none"
         _audit("wake_next_enforced", {"verdict": verdict, "wake_next": "none"})
 
-    # 4f. Mark complete if scope and verdict are established
-    if verdict in ("real", "unverifiable") and output.scope.scope_status == "complete":
+    # 4g. Mark complete if scope and verdict are established
+    if verdict in ("real", "rumour", "unverifiable") and output.scope.scope_status == "complete":
         output.status = "complete"
 
     # ------------------------------------------------------------------

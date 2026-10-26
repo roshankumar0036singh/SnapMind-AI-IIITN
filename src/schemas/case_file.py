@@ -48,10 +48,17 @@ class VerificationVerdict(BaseModel):
     """
     verdict: str = Field(..., description="'real', 'rumour', or 'unverifiable'")
     confidence: float = Field(default=1.0, ge=0.0, le=1.0)
+    proposition_status: str = "insufficient"
+    proposition: Dict[str, Any] = Field(default_factory=dict)
     reasons: List[str] = Field(default_factory=list)
     supporting_docs: List[str] = Field(default_factory=list)
+    contradicting_docs: List[str] = Field(default_factory=list)
     retractions: List[str] = Field(default_factory=list)
-    message_to_user: str
+    evidence_roles: List[Dict[str, Any]] = Field(default_factory=list)
+    support_score: float = 0.0
+    contradiction_score: float = 0.0
+    decision_basis: str = ""
+    message_to_user: str = ""
 
 
 class EvidenceIndexEntry(BaseModel):
@@ -184,13 +191,19 @@ class ContradictionRecord(BaseModel):
 class VerificationResult(BaseModel):
     verdict: str = "unverifiable"  # real | rumour | unverifiable
     confidence: float = 0.0
+    proposition_status: str = "insufficient"  # confirmed | contradicted | insufficient
+    proposition: Dict[str, Any] = Field(default_factory=dict)
     reasons: List[str] = Field(default_factory=list)
     supporting_refs: List[str] = Field(default_factory=list)
     contradicting_refs: List[str] = Field(default_factory=list)
-    corrections: List[CorrectionRecord] = Field(default_factory=list)
+    corrections: List[Union[CorrectionRecord, Dict[str, Any], str]] = Field(default_factory=list)
     retractions: List[str] = Field(default_factory=list)
-    contradictions: List[ContradictionRecord] = Field(default_factory=list)
+    contradictions: List[Union[ContradictionRecord, Dict[str, Any], str]] = Field(default_factory=list)
+    evidence_roles: List[Dict[str, Any]] = Field(default_factory=list)
     unresolved_questions: List[str] = Field(default_factory=list)
+    support_score: float = 0.0
+    contradiction_score: float = 0.0
+    decision_basis: str = ""
 
     @field_validator("verdict")
     @classmethod

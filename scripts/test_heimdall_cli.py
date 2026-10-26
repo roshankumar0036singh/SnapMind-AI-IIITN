@@ -120,27 +120,40 @@ def main():
     print(f"Wake Next      : {wake_next}")
     print("-" * 60)
 
-    # 4. Integrate Thor and Loki conditional execution based on verdict
+    # 4. Integrate Thor and Loki conditional execution based on proposition verdict
     if verdict != "real" or wake_next != "thor_and_loki":
         print("\n" + "=" * 60)
-        print("  CASE STATUS: REJECTED / DISRUPTION NOT FOUND")
+        print("  CASE STATUS: CLAIM NOT VERIFIED")
         print("=" * 60)
-        print(f"Heimdall determined the case is [{verdict.upper()}].")
+        prop_status = getattr(output.verification, "proposition_status", "insufficient")
+        print(f"Heimdall determined the case is [{verdict.upper()}] (Proposition: {prop_status.upper()}).")
+
+        if verdict == "rumour":
+            print("\nThe specific claim was classified as RUMOUR/DECOY because stronger eligible evidence contradicts it.")
+        elif verdict == "unverifiable":
+            print("\nThe specific claim remains UNVERIFIABLE because the corpus contains insufficient eligible evidence.")
+        else:
+            print(f"\nThe specific claim could not be verified (Verdict: {verdict.upper()}).")
+
         if output.verification.reasons:
-            print("Reasons:")
+            print("\nReasons & Evidence Evaluation:")
             for r in output.verification.reasons:
                 print(f"  * {r}")
-        print("\n[OUTCOME]: The disruption event was not found or verified in the corpus.")
-        print("-> Thor and Loki agents are NOT awakened.")
+        if getattr(output.verification, "decision_basis", None):
+            print(f"\nDecision Basis: {output.verification.decision_basis}")
+        print("\n[OUTCOME]: Thor and Loki agents are NOT awakened.")
         print(f"-> Case {case_id} closed without debate.\n")
     else:
         print("\n" + "=" * 60)
         print("  CASE STATUS: APPROVED (REAL) -- AWAKENING AGENTS")
         print("=" * 60)
-        print(f"Heimdall verified disruption event as REAL (Confidence: {confidence * 100:.0f}%).")
+        print("The event proposition was verified and the case is approved for Thor/Loki debate.")
+        print(f"Confidence: {confidence * 100:.0f}%")
         print("Supporting Evidence Documents:")
         for ref in getattr(output.verification, "supporting_refs", []):
             print(f"  * {ref}")
+        if getattr(output.verification, "decision_basis", None):
+            print(f"Decision Basis: {output.verification.decision_basis}")
         print("\n[OUTCOME]: Case approved for trial! Waking Thor and Loki concurrently...")
         print("=" * 60)
 
